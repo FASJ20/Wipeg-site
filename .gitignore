@@ -1,0 +1,18 @@
+node_modules/
+.next/
+out/
+.env*
+!.env.example
+next-env.d.ts
+.DS_Store
+
+# Local preview/verification artefacts
+preview-home.png
+.vercel/
+
+# Source material, kept locally only.
+# - "School website template.mp4" is a recording of a third-party commercial
+#   template used purely as a design reference; it is not ours to redistribute.
+# - The fliers and AI photos are already derived into public/images and
+#   public/brand, so the originals would only bloat the repo (~17 MB).
+Images/

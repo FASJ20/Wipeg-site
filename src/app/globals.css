@@ -1,0 +1,276 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   WIPEG design tokens
+   Palette sampled directly from the official WIPEG fliers:
+     royal blue  #102B94   orange-red #E73907
+   The dark "stage" sections translate the reference template's deep
+   green into WIPEG navy.
+------------------------------------------------------------------- */
+@theme {
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand blue */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #dde5ff;
+  --color-brand-200: #bcccff;
+  --color-brand-300: #8ea8fb;
+  --color-brand-400: #5c7cf2;
+  --color-brand-500: #3355e2;
+  --color-brand-600: #1e44c8;
+  --color-brand-700: #1734a8;
+  --color-brand-800: #102b94;
+  --color-brand-900: #0b1b5c;
+  --color-brand-950: #060f38;
+
+  /* Ink — the darkest navy, base of every dark section */
+  --color-ink: #08123a;
+  --color-ink-soft: #0d1c53;
+
+  /* Accent orange-red */
+  --color-accent-50: #fff2ed;
+  --color-accent-100: #ffe0d5;
+  --color-accent-200: #ffc0ab;
+  --color-accent-300: #ff9670;
+  --color-accent-400: #fb6a38;
+  --color-accent-500: #e73907;
+  --color-accent-600: #c62d04;
+  --color-accent-700: #9d2405;
+
+  /* Gold — badges and highlight chips */
+  --color-gold-300: #ffd97a;
+  --color-gold-400: #f7c343;
+  --color-gold-500: #f0a91d;
+
+  /* Neutrals */
+  --color-paper: #ffffff;
+  --color-tint: #f1f4ff;
+  --color-tint-warm: #fff8ec;
+  --color-slate-ink: #46516f;
+
+  --radius-xl2: 1.5rem;
+  --radius-xl3: 2rem;
+
+  --shadow-card: 0 18px 40px -22px rgb(8 18 58 / 0.28);
+  --shadow-lift: 0 30px 60px -26px rgb(8 18 58 / 0.38);
+  --shadow-glow: 0 22px 48px -20px rgb(231 57 7 / 0.5);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------------------------------- base --------------------------- */
+@layer base {
+  * {
+    border-color: color-mix(in srgb, var(--color-brand-900) 10%, transparent);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-accent-500);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent-500);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+/* ------------------------------- utilities ------------------------- */
+@utility container-page {
+  width: 100%;
+  margin-inline: auto;
+  max-width: 80rem;
+  padding-inline: 1.25rem;
+
+  @media (width >= 1024px) {
+    padding-inline: 2.5rem;
+  }
+}
+
+/* Small uppercase label with a leading dot — used above every heading,
+   exactly as in the reference template. */
+@utility eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@utility text-gradient-brand {
+  background: linear-gradient(
+    100deg,
+    var(--color-accent-400) 0%,
+    var(--color-gold-400) 55%,
+    var(--color-accent-300) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* The organic "leaf" silhouette the reference uses for its hero photo. */
+@utility mask-blob {
+  border-radius: 48% 52% 46% 54% / 62% 40% 60% 38%;
+}
+
+@utility mask-leaf {
+  border-radius: 16rem 16rem 16rem 3rem;
+}
+
+/* ------------------------------- effects --------------------------- */
+
+/* Slow-drifting colour blobs behind dark sections. */
+@keyframes wipeg-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(6%, -8%, 0) scale(1.12);
+  }
+  66% {
+    transform: translate3d(-7%, 6%, 0) scale(0.94);
+  }
+}
+
+@keyframes wipeg-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes wipeg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wipeg-pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes wipeg-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-drift {
+  animation: wipeg-drift 22s var(--ease-out-quint) infinite;
+}
+.animate-marquee {
+  animation: wipeg-marquee 42s linear infinite;
+}
+.animate-spin-slow {
+  animation: wipeg-spin 18s linear infinite;
+}
+.animate-pulse-ring {
+  animation: wipeg-pulse-ring 2.4s ease-out infinite;
+}
+.animate-float {
+  animation: wipeg-float 5s ease-in-out infinite;
+}
+
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* Faint blueprint grid used on dark sections. */
+.grid-lines {
+  background-image: linear-gradient(
+      to right,
+      rgb(255 255 255 / 0.05) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 68px 68px;
+}
+
+.dot-grid {
+  background-image: radial-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* Custom scrollbar keeps the brand present even in the chrome. */
+@media (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-tint);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-brand-800);
+    border-radius: 99px;
+    border: 3px solid var(--color-tint);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent-500);
+  }
+}
+
+/* ---------------------------- accessibility ------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

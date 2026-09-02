@@ -46,11 +46,20 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: "1"
 
-      - name: Upload build output
-        if: success()
-        uses: actions/upload-artifact@v7
-        with:
-          name: next-build
-          path: .next
-          retention-days: 5
-          if-no-files-found: error
+      # No build artifact is uploaded on purpose.
+      #
+      # `.next` is ~570 MB (about half of it the Turbopack cache), and
+      # upload-artifact skips dotfiles by default — "hidden files are defined
+      # as any file beginning with '.'" — so uploading it needs
+      # `include-hidden-files: true` and would then ship hundreds of megabytes
+      # per run. Nothing consumes it either: Vercel builds from source itself,
+      # and the step above already proves the build succeeds.
+      #
+      # If a deployable artifact is ever needed, add it back as:
+      #   - uses: actions/upload-artifact@v7
+      #     with:
+      #       name: next-build
+      #       include-hidden-files: true
+      #       path: |
+      #         .next
+      #         !.next/cache

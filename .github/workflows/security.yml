@@ -18,22 +18,25 @@ permissions:
   contents: read
 
 jobs:
+  # ---------------------------------------------------------------------
+  # Runs anywhere — no GitHub Advanced Security required.
+  # ---------------------------------------------------------------------
   audit:
     name: npm audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm ci
 
-      # Runtime dependencies are what actually ship — fail the build on any
+      # Runtime dependencies are what actually ship — fail on any
       # moderate-or-worse advisory there.
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=moderate
@@ -43,8 +46,19 @@ jobs:
       - name: Audit all dependencies (informational)
         run: npm audit || true
 
+  # ---------------------------------------------------------------------
+  # CodeQL and Dependency Review both need the repository to be public, or
+  # GitHub Advanced Security on a private repo. Without that, CodeQL errors
+  # with "Advanced Security must be enabled" and Dependency Review with
+  # "Dependency review is not supported on this repository".
+  #
+  # They are therefore skipped on private repositories rather than failing
+  # the workflow. Make the repo public (or enable GHAS) and they light up
+  # automatically — no edit needed here.
+  # ---------------------------------------------------------------------
   codeql:
     name: CodeQL
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -54,23 +68,25 @@ jobs:
       actions: read
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Initialise CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
           queries: security-and-quality
 
       - name: Analyse
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: /language:javascript-typescript
 
   dependency-review:
     name: Dependency review
-    # Only meaningful on pull requests — it diffs the manifest against base.
-    if: github.event_name == 'pull_request'
+    # Pull requests only — it diffs the manifest against the base branch.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -79,10 +95,13 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
+        # Belt and braces: if the dependency graph is off for any other
+        # reason, report it without failing the run.
+        continue-on-error: true
         with:
           fail-on-severity: moderate
           comment-summary-in-pr: always

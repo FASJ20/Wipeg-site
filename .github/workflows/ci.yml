@@ -23,12 +23,13 @@ jobs:
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          # Node 24 is what the project is developed and built against.
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -43,12 +44,11 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # Keeps the build output stable and skips Next.js telemetry in CI.
           NEXT_TELEMETRY_DISABLED: "1"
 
       - name: Upload build output
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: next-build
           path: .next

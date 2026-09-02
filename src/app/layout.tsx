@@ -6,6 +6,7 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { ScrollProgress } from "@/components/site/ScrollProgress";
 import { school } from "@/data/site";
+import { isIndexable } from "./robots";
 
 /* Poppins matches the geometric sans used across the WIPEG fliers. */
 const poppins = Poppins({
@@ -45,6 +46,12 @@ export const metadata: Metadata = {
     icon: "/brand/wipeg-crest.png",
     apple: "/brand/wipeg-crest.png",
   },
+  // robots.txt only asks crawlers not to fetch; this header keeps pages
+  // discovered via inbound links out of the index too. Flips to indexable
+  // when NEXT_PUBLIC_ALLOW_INDEXING=true — see src/app/robots.ts.
+  robots: isIndexable
+    ? { index: true, follow: true }
+    : { index: false, follow: false, nocache: true },
 };
 
 export const viewport: Viewport = {

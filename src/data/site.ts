@@ -63,7 +63,7 @@ export const branches = [
   },
   { city: "Yaoundé", region: "Centre Region", phone: "+237 682 832 207", main: false },
   { city: "Maroua", region: "Far North Region", phone: "+237 655 596 057", main: false },
-  { city: "Bamenda", region: "North West Region", phone: "+237 677 487 127", main: false },
+  { city: "Bamenda", region: "North West Region", phone: "+237 675 979 319", main: false },
   { city: "Touboro", region: "North Region", phone: "+237 656 894 203", main: false },
 ] as const;
 

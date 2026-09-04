@@ -8,7 +8,7 @@ import { SITE_URL } from "./sitemap";
  *
  * Preview and claimable deployments therefore stay unindexed, which matters
  * while the site still carries placeholder content (invented lecturers,
- * testimonials and news) alongside WIPEG's real name, accreditation number
+ * entry requirements) alongside WIPEG's real name, accreditation number
  * and phone numbers. Set the variable on the production domain once the
  * REPLACE-ME.md items have been swapped for real information.
  */

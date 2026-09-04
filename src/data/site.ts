@@ -362,28 +362,40 @@ export const lecturers = [
   },
 ];
 
-/* 🔶 PLACEHOLDER — testimonials. Replace with real student quotes. */
-export const testimonials = [
+/* Testimonials — the NAMES and ROLES below are real, supplied by the school.
+   🔶 The QUOTES are drafts written here, not words these people actually
+   said. Every one needs the named person to approve or rewrite it before
+   this site is published. Never add a testimonial for someone who has not
+   agreed to it.
+
+   `photo` is intentionally absent: a real person's name must never be paired
+   with a stock or AI face. The section renders initials until real, consented
+   portraits exist — drop a file in /public/images and set `photo` to use it. */
+export type Testimonial = {
+  name: string;
+  role: string;
+  quote: string;
+  photo?: string;
+};
+
+export const testimonials: Testimonial[] = [
   {
+    name: "Fai Arnold",
+    role: "Software Engineer",
     quote:
-      "I came to WIPEG for the HND in Computer Science and Networks and left with the certificate, a driving licence and an English certificate. The lecturers stayed with us until the practicals actually worked.",
-    name: "Melvis A.",
-    role: "HND, Computer Science and Networks",
-    image: "/images/library-study.jpg",
+      "The engineering track was hands-on from the start — we built and broke things on real machines rather than copying notes. That is the habit I still work with every day.",
   },
   {
+    name: "Fai Sheryl",
+    role: "Marketer",
     quote:
-      "The nursing programme put me on the ward from the first year. By the time I finished, the hospital I did my placement at already knew my name.",
-    name: "Clarisse N.",
-    role: "HND, Nursing",
-    image: "/images/graduates.jpg",
+      "What WIPEG gave me beyond the certificate was confidence in a room. The lecturers pushed us to present, defend an idea and take feedback, which is most of the job.",
   },
   {
+    name: "Viban Randolph",
+    role: "Entertainment",
     quote:
-      "Paying in installments is what made it possible for my family. Nobody at WIPEG ever made me feel small about it, and I graduated on time.",
-    name: "Bright T.",
-    role: "BTS, Accounting",
-    image: "/images/mentoring.jpg",
+      "Paying in installments made it possible for me to finish, and the free English classes opened doors I did not expect. WIPEG genuinely is a place to be.",
   },
 ];
 
@@ -423,40 +435,6 @@ export const faqs = [
   {
     q: "Is WIPEG backed by any university?",
     a: `WIPEG is mentored by the ${school.mentoredBy} and affiliated to ${school.affiliatedTo}, which opens progression routes for our graduates into degree-level study.`,
-  },
-];
-
-/* 🔶 PLACEHOLDER — news items. Replace with real school news. */
-export const news = [
-  {
-    slug: "new-intake-open",
-    category: "Admissions",
-    title: "New academic intake now open across all ten departments",
-    excerpt:
-      "Applications are open for HND/BTS, Bachelors, Masters, vocational and IT certification tracks at the Garoua main campus and every branch.",
-    image: "/images/real-graduands-line.jpg",
-    date: "12 August 2026",
-    author: "WIPEG Admissions",
-  },
-  {
-    slug: "it-certification-lab",
-    category: "Campus",
-    title: "Expanded IT certification lab opens for full-stack and DevOps tracks",
-    excerpt:
-      "The computer engineering block adds new workstations for the full-stack, backend, frontend and DevOps certification programmes.",
-    image: "/images/computer-lab.jpg",
-    date: "29 July 2026",
-    author: "WIPEG Communications",
-  },
-  {
-    slug: "partnership-bamenda",
-    category: "Partnerships",
-    title: "Strengthening our partnership with the University of Bamenda",
-    excerpt:
-      "Continued collaboration opens further progression routes for WIPEG graduates into degree-level study.",
-    image: "/images/real-award.jpg",
-    date: "03 July 2026",
-    author: "Office of the Director",
   },
 ];
 

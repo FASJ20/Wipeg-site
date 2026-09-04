@@ -2,13 +2,24 @@
 
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
-import { Quote, Star } from "lucide-react";
+import { Quote } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { testimonials } from "@/data/site";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { GlowField } from "@/components/ui/GlowField";
 import { Reveal } from "@/components/ui/Reveal";
+
+/** "Fai Arnold" -> "FA". Used in place of a portrait until real, consented
+    photographs exist — a named person should never wear a stock face. */
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 export function Testimonials() {
   const [i, setI] = useState(0);
@@ -19,7 +30,7 @@ export function Testimonials() {
     if (paused) return;
     const timer = setTimeout(
       () => setI((n) => (n + 1) % testimonials.length),
-      8000,
+      9000,
     );
     return () => clearTimeout(timer);
   }, [i, paused]);
@@ -33,95 +44,67 @@ export function Testimonials() {
       <GlowField variant="section" />
 
       <div className="container-page relative">
-        <Reveal>
+        <Reveal className="mx-auto max-w-2xl text-center">
           <Eyebrow tone="dark">Testimonials</Eyebrow>
-        </Reveal>
-        <Reveal delay={0.08}>
-          <h2 className="mt-5 max-w-lg text-[2.1rem] font-extrabold leading-[1.12] sm:text-[2.7rem]">
-            What our students say
+          <h2 className="mt-5 text-[2.1rem] font-extrabold leading-[1.12] sm:text-[2.7rem]">
+            What our graduates say
           </h2>
         </Reveal>
 
-        <Reveal delay={0.14} className="mt-12">
-          <div className="grid items-stretch gap-6 lg:grid-cols-[1.35fr_0.65fr]">
-            {/* Quote card */}
-            <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-7 backdrop-blur-sm sm:p-10">
-              <Quote className="size-9 fill-gold-400 text-gold-400" />
+        <Reveal delay={0.12} className="mx-auto mt-12 max-w-3xl">
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-8 text-center backdrop-blur-sm sm:p-12">
+            <Quote className="mx-auto size-10 fill-gold-400 text-gold-400" />
 
-              <div className="mt-5 flex gap-1" aria-label="Five out of five">
-                {Array.from({ length: 5 }).map((_, s) => (
-                  <Star key={s} className="size-4 fill-gold-400 text-gold-400" />
-                ))}
-              </div>
+            <AnimatePresence mode="wait">
+              <motion.blockquote
+                key={t.name}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -14 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-7"
+              >
+                <p className="text-[1.05rem] leading-relaxed text-white/85 sm:text-[1.2rem]">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <footer className="mt-8">
+                  <p className="text-[1rem] font-bold text-white">{t.name}</p>
+                  <p className="mt-1 text-[0.8rem] text-gold-400">{t.role}</p>
+                </footer>
+              </motion.blockquote>
+            </AnimatePresence>
 
-              <AnimatePresence mode="wait">
-                <motion.blockquote
-                  key={t.name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -14 }}
-                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                  className="mt-6"
-                >
-                  <p className="text-[1.05rem] leading-relaxed text-white/85 sm:text-[1.15rem]">
-                    &ldquo;{t.quote}&rdquo;
-                  </p>
-                  <footer className="mt-7">
-                    <p className="text-[0.95rem] font-bold text-white">{t.name}</p>
-                    <p className="mt-0.5 text-[0.78rem] text-white/50">{t.role}</p>
-                  </footer>
-                </motion.blockquote>
-              </AnimatePresence>
-
-              {/* Avatar picker */}
-              <div className="mt-8 flex gap-3">
-                {testimonials.map((item, idx) => (
+            {/* Picker — monograms, or the real portrait once one is supplied */}
+            <div className="mt-9 flex justify-center gap-3">
+              {testimonials.map((item, idx) => {
+                const active = idx === i;
+                return (
                   <button
                     key={item.name}
                     type="button"
                     onClick={() => setI(idx)}
                     aria-label={`Read the testimonial from ${item.name}`}
-                    aria-current={idx === i}
-                    className={`relative size-11 overflow-hidden rounded-full transition-all duration-400 ${
-                      idx === i
-                        ? "scale-110 ring-2 ring-gold-400 ring-offset-2 ring-offset-ink"
-                        : "opacity-50 grayscale hover:opacity-90 hover:grayscale-0"
+                    aria-current={active}
+                    className={`relative grid size-12 place-items-center overflow-hidden rounded-full text-[0.8rem] font-bold transition-all duration-400 ${
+                      active
+                        ? "scale-110 bg-gold-400 text-ink ring-2 ring-gold-400 ring-offset-2 ring-offset-ink"
+                        : "bg-white/10 text-white/70 ring-1 ring-white/15 hover:bg-white/20 hover:text-white"
                     }`}
                   >
-                    <Image
-                      src={item.image}
-                      alt=""
-                      fill
-                      sizes="44px"
-                      className="object-cover"
-                    />
+                    {item.photo ? (
+                      <Image
+                        src={item.photo}
+                        alt=""
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      initials(item.name)
+                    )}
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Portrait */}
-            <div className="relative min-h-[18rem] overflow-hidden rounded-[1.75rem] border border-white/10">
-              {/* Stacked portraits cross-fade — see the note in Hero.tsx. */}
-              <AnimatePresence>
-                <motion.div
-                  key={t.image}
-                  initial={{ opacity: 0, scale: 1.08 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                  className="absolute inset-0"
-                >
-                  <Image
-                    src={t.image}
-                    alt=""
-                    fill
-                    sizes="(min-width: 1024px) 30vw, 92vw"
-                    className="object-cover"
-                  />
-                </motion.div>
-              </AnimatePresence>
-              <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
+                );
+              })}
             </div>
           </div>
         </Reveal>

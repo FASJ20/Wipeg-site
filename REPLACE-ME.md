@@ -44,16 +44,34 @@ rather than staff portraits. Replace with real heads of department and proper
 headshots (portrait crop, roughly 4:5). Drop the section from
 `src/app/page.tsx` if the school would rather not name staff.
 
-## 4. Testimonials — `src/data/site.ts` → `testimonials`
+## 4. Testimonials — real names, drafted words
 
-All three quotes and names are **invented**. Replace with real, consented
-student quotes, or remove `<Testimonials />` from `src/app/page.tsx`.
+The section is back with three **real** graduates supplied by the school:
 
-## 5. News items — `src/data/site.ts` → `news`
+| Name | Role |
+| --- | --- |
+| Fai Arnold | Software Engineer |
+| Fai Sheryl | Marketer |
+| Viban Randolph | Entertainment |
 
-All three posts are **invented** and currently link to `/contact` because there
-is no blog. Either supply real news, or remove `<NewsSection />` from
-`src/app/page.tsx`.
+🔶 **The quotes are drafts I wrote, not words these people said.** Each named
+person must approve or rewrite their own quote before this site is published —
+attributing invented words to a real, identifiable person is exactly the
+problem the removed placeholders had.
+
+Edit them in `src/data/site.ts` → `testimonials`.
+
+**Photos:** deliberately none. The section shows initials (FA, FS, VR) rather
+than pairing a real name with a stock or AI face. When you have a real portrait
+with that person's consent, drop it in `/public/images` and set `photo` on
+their entry — the component switches from initials to the photo automatically.
+
+## 5. News — removed
+
+✅ The invented news posts are gone, along with the section and its component.
+
+If the school wants a news feed later, that is a real feature to build (a blog
+with its own pages), not three cards linking to the contact page.
 
 ## 6. Entry requirements — `src/data/site.ts` → `entryRequirements`
 

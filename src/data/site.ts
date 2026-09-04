@@ -480,6 +480,7 @@ export const navigation = [
     })),
   },
   { label: "Admissions", href: "/admissions" },
+  { label: "Testimonials", href: "/testimonials" },
   { label: "Campus", href: "/campus" },
   { label: "Contact", href: "/contact" },
 ];

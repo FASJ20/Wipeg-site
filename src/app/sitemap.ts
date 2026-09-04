@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/about", priority: 0.8 },
     { path: "/programmes", priority: 0.9 },
     { path: "/admissions", priority: 0.9 },
+    { path: "/testimonials", priority: 0.6 },
     { path: "/campus", priority: 0.7 },
     { path: "/contact", priority: 0.7 },
   ].map(({ path, priority }) => ({

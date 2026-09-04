@@ -66,10 +66,24 @@ real fee schedule if the school wants one published.
 The four facility descriptions are **plausible but invented**. Confirm which
 facilities actually exist and how to describe them.
 
-## 9. Map — `src/app/campus/page.tsx`
+## 9. Map — `src/data/site.ts` → `school.campus`
 
-The map is a styled placeholder panel, not a real map. Once the school confirms
-the exact gate coordinates, swap it for a Google Maps or OpenStreetMap embed.
+✅ A real Google Map is now embedded on the campus page, with a "Get
+directions" button. It needs no API key.
+
+Google resolves `mapQuery` ("Collège Bilingue de l'Espoir, Plateau, Garoua")
+and drops the pin on **Middle School De L'espoir, 8CM3+V89, Garoua** — the
+right landmark, with the campus behind it.
+
+🔶 `coords` is still only the Plateau quarter centroid from OpenStreetMap,
+which has no entry for the college. **To put the pin exactly on the campus
+gate:** open Google Maps, right-click the gate, click the coordinates to copy
+them, and paste them into `school.campus.coords`. Optionally set `mapQuery` to
+WIPEG's own Google Business listing once it exists.
+
+Note: the embed required `frame-src https://www.google.com` in the CSP
+(`next.config.ts`). Without it the iframe is blocked silently — an empty box,
+no console error.
 
 ## 10. The enquiry form — `src/components/site/EnquiryForm.tsx`
 

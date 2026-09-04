@@ -7,6 +7,7 @@ import {
   FlaskConical,
   MapPin,
   Monitor,
+  Navigation,
   Phone,
   Presentation,
 } from "lucide-react";
@@ -67,6 +68,18 @@ const gallery = [
   { src: "/images/library-group.jpg", alt: "Students studying together", span: "" },
   { src: "/images/hero-lecture-hall.jpg", alt: "A WIPEG lecture in progress", span: "" },
 ];
+
+/* Google Maps embed needs no API key in this "q=" form. Google resolves the
+   landmark query at load time; the coordinates ride along as a fallback so
+   the map still lands on the right quarter of Garoua if the name doesn't
+   resolve. */
+const mapEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(
+  school.campus.mapQuery,
+)}&ll=${school.campus.coords.lat},${school.campus.coords.lng}&z=16&output=embed`;
+
+const mapsDirectionsHref = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+  school.campus.mapQuery,
+)}`;
 
 export default function CampusPage() {
   return (
@@ -278,36 +291,37 @@ export default function CampusPage() {
             </RevealGroup>
           </div>
 
-          {/* 🔶 PLACEHOLDER — swap for a real embedded map once the school
-              confirms the exact coordinates of the campus gate. */}
           <Reveal direction="left" className="relative">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] border border-brand-900/8 bg-tint">
-              <div
-                aria-hidden
-                className="absolute inset-0 opacity-[0.35]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(to right, rgba(16,43,148,0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(16,43,148,0.18) 1px, transparent 1px)",
-                  backgroundSize: "44px 44px",
-                }}
+            <div className="overflow-hidden rounded-[2rem] border border-brand-900/8 shadow-[var(--shadow-card)]">
+              <iframe
+                title={`Map showing the WIPEG ${school.campus.name} in ${school.campus.city}`}
+                src={mapEmbedSrc}
+                className="block aspect-[4/3] w-full border-0"
+                loading="lazy"
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
               />
-              <div className="absolute inset-0 grid place-items-center p-8 text-center">
-                <div>
-                  <span className="relative mx-auto grid size-16 place-items-center rounded-full bg-accent-500 text-white">
-                    <span className="animate-pulse-ring absolute inset-0 rounded-full bg-accent-500/60" />
-                    <MapPin className="relative size-7" />
+
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-brand-900/8 bg-white p-5">
+                <p className="flex items-start gap-3 text-[0.85rem] leading-snug text-slate-ink">
+                  <MapPin className="mt-0.5 size-4 shrink-0 text-accent-500" />
+                  <span>
+                    <span className="block font-bold text-ink">
+                      {school.campus.name}
+                    </span>
+                    {school.campus.line}, {school.campus.city}
                   </span>
-                  <p className="mt-5 text-[1.05rem] font-extrabold text-ink">
-                    {school.campus.name}
-                  </p>
-                  <p className="mt-2 text-[0.85rem] leading-relaxed text-slate-ink">
-                    {school.campus.line} — near Collège Bilingue de l&rsquo;Espoir,
-                    behind the Governor&rsquo;s office
-                  </p>
-                  <p className="mt-4 text-[0.7rem] font-semibold uppercase tracking-wide text-slate-ink/50">
-                    Interactive map to be embedded
-                  </p>
-                </div>
+                </p>
+
+                <a
+                  href={mapsDirectionsHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex h-11 items-center gap-2 rounded-full bg-brand-800 px-5 text-[0.85rem] font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-500"
+                >
+                  <Navigation className="size-4" />
+                  Get directions
+                </a>
               </div>
             </div>
           </Reveal>

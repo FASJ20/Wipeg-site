@@ -30,7 +30,10 @@ const csp = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "frame-src 'none'",
+  // The campus page embeds a Google Map. Without this the iframe is blocked
+  // silently — no console error, just an empty box. Google is the only
+  // origin allowed to frame content here.
+  "frame-src https://www.google.com https://maps.google.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "upgrade-insecure-requests",

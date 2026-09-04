@@ -38,6 +38,15 @@ export const school = {
     line: "Plateau, behind Collège de l'Espoir",
     detail:
       "Plateau, behind Collège de l'Espoir (near Collège Bilingue de l'Espoir, behind the Governor's office), Garoua, North Region, Cameroon",
+    /* Map centring for the campus page.
+       🔶 `coords` is the Plateau quarter of Garoua (the OpenStreetMap
+       centroid), NOT a surveyed position for the campus gate — Collège de
+       l'Espoir is not in OpenStreetMap. Google resolves `mapQuery` at load
+       time and usually lands closer; replace `coords` with the exact gate
+       position (right-click the spot in Google Maps → copy coordinates)
+       to make the pin precise. */
+    mapQuery: "Collège Bilingue de l'Espoir, Plateau, Garoua, Cameroun",
+    coords: { lat: 9.3119794, lng: 13.3816609 },
   },
   /* 🔶 PLACEHOLDER — office hours are still not stated on any material */
   hours: "Monday – Friday, 8:00 – 17:00 · Saturday, 9:00 – 13:00",

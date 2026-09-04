@@ -280,10 +280,12 @@ export const totalCourses = departments.reduce(
   0,
 );
 
-/* ✅ FLIER — the four "OUR FEATURING PARTNERS" institutions */
+/* ✅ FLIER — the "OUR FEATURING PARTNERS" institutions, plus HIPTEX, a
+   friendly institute in Garoua (Auth. N° 21-00601/N/MINESUP). */
 export const partners = [
   "The University of Bamenda",
   "Bamenda University of Science and Technology",
+  "Higher Institute for Professionalism and Excellence (HIPTEX), Garoua",
   "Self-Reliance Institute of Vocational Training of Garoua",
   "Institute of Self-Reliance for Business, Science and Technology of Toubouro",
 ];
@@ -321,7 +323,7 @@ export const advantages = [
 export const stats = [
   { value: 10, suffix: "", label: "Academic departments" },
   { value: totalCourses, suffix: "+", label: "Programmes on offer" },
-  { value: 4, suffix: "", label: "Partner institutions" },
+  { value: partners.length, suffix: "", label: "Partner institutions" },
   { value: 1200, suffix: "+", label: "Students enrolled", placeholder: true },
 ];
 
@@ -396,7 +398,7 @@ export const faqs = [
   },
   {
     q: "Which institutions does WIPEG work with?",
-    a: `We partner with ${partners.slice(0, 2).join(", ")}, and two Self-Reliance institutes in Garoua and Toubouro.`,
+    a: `We work with ${partners.length} institutions — ${partners.slice(0, 2).join(", ")}, HIPTEX in Garoua, and the Self-Reliance institutes in Garoua and Touboro.`,
   },
   {
     q: "Where is the main campus and how do I visit?",

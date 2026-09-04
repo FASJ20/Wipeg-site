@@ -21,7 +21,7 @@ import {
 export const metadata: Metadata = {
   title: "Admissions",
   description:
-    "How to apply to WIPEG Bamenda — entry requirements, the application steps, fees paid in installments, scholarships, and the enquiry form.",
+    "How to apply to WIPEG Garoua — entry requirements, the application steps, fees paid in installments, scholarships, and the enquiry form.",
 };
 
 export default function AdmissionsPage() {

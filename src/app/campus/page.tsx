@@ -1,17 +1,27 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { ArrowRight, BookOpen, FlaskConical, MapPin, Monitor, Phone, Presentation } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Building2,
+  FlaskConical,
+  MapPin,
+  Monitor,
+  Phone,
+  Presentation,
+} from "lucide-react";
 
 import { PageHero } from "@/components/site/PageHero";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { GlowField } from "@/components/ui/GlowField";
 import { Reveal, RevealGroup, RevealItem } from "@/components/ui/Reveal";
-import { school } from "@/data/site";
+import { branches, school } from "@/data/site";
 
 export const metadata: Metadata = {
-  title: "Campus & facilities",
+  title: "Campus & branches",
   description:
-    "The WIPEG Bamenda campus at Ntambessi — lecture halls, computer laboratory, library and practical training spaces.",
+    "The WIPEG main campus at Plateau, Garoua — behind Collège de l'Espoir — plus our branches in Yaoundé, Maroua, Bamenda and Touboro.",
 };
 
 /* 🔶 PLACEHOLDER — facility descriptions are illustrative; confirm with the
@@ -25,7 +35,7 @@ const facilities = [
   {
     icon: Monitor,
     title: "Computer laboratory",
-    body: "Workstations for the computer engineering and IT certification tracks — networks, web design and development.",
+    body: "Workstations for the School of Engineering and Technology — software, networks, security and web design.",
   },
   {
     icon: FlaskConical,
@@ -39,27 +49,35 @@ const facilities = [
   },
 ];
 
+/* Real photographs from WIPEG ceremonies and campus life. */
 const gallery = [
-  { src: "/images/hero-lecture-hall.jpg", alt: "A WIPEG lecture in the main hall", span: "sm:col-span-2 sm:row-span-2" },
-  { src: "/images/computer-lab.jpg", alt: "Students in the WIPEG computer laboratory", span: "" },
-  { src: "/images/library-group.jpg", alt: "Students studying together in the library", span: "" },
-  { src: "/images/lecturer-values.jpg", alt: "A lecturer presenting the WIPEG core values", span: "sm:col-span-2" },
-  { src: "/images/graduation.jpg", alt: "WIPEG graduands on graduation day", span: "" },
-  { src: "/images/medical-lecture.jpg", alt: "A medical sciences lecture at WIPEG", span: "" },
-  { src: "/images/lecturer-programmes.jpg", alt: "A lecturer presenting the WIPEG programmes", span: "sm:col-span-2" },
-  { src: "/images/mentoring.jpg", alt: "A lecturer mentoring WIPEG students", span: "" },
-  { src: "/images/library-study.jpg", alt: "WIPEG students working in the library", span: "" },
-  { src: "/images/graduates.jpg", alt: "WIPEG graduates in academic gowns", span: "" },
-  { src: "/images/lecturer-career.jpg", alt: "A career development session at WIPEG", span: "" },
+  {
+    src: "/images/real-ceremony.jpg",
+    alt: "The head table at a WIPEG graduation ceremony",
+    span: "sm:col-span-2 sm:row-span-2",
+  },
+  { src: "/images/real-graduands-line.jpg", alt: "WIPEG graduands in academic gowns", span: "" },
+  { src: "/images/real-capping.jpg", alt: "A WIPEG graduand being capped", span: "" },
+  { src: "/images/real-award.jpg", alt: "An award presented at a WIPEG ceremony", span: "sm:col-span-2" },
+  { src: "/images/real-graduands.jpg", alt: "WIPEG graduands at the ceremony", span: "" },
+  { src: "/images/real-address-1.jpg", alt: "An address to WIPEG graduands", span: "" },
+  { src: "/images/computer-lab.jpg", alt: "Students in the WIPEG computer laboratory", span: "sm:col-span-2" },
+  { src: "/images/real-address-2.jpg", alt: "A speaker at the WIPEG ceremony", span: "" },
+  { src: "/images/real-address-3.jpg", alt: "A speaker addressing the WIPEG ceremony", span: "" },
+  { src: "/images/library-group.jpg", alt: "Students studying together", span: "" },
+  { src: "/images/hero-lecture-hall.jpg", alt: "A WIPEG lecture in progress", span: "" },
 ];
 
 export default function CampusPage() {
   return (
     <>
       <PageHero
-        eyebrow="Our campus"
-        title={`The ${school.campus.name} at ${school.campus.line}`}
-        intro={school.campus.detail}
+        eyebrow="Campus & branches"
+        title={`Our main campus is in ${school.campus.city}`}
+        intro={`${school.campus.detail} — with branches in ${branches
+          .filter((b) => !b.main)
+          .map((b) => b.city)
+          .join(", ")}.`}
         breadcrumb={[{ label: "Home", href: "/" }, { label: "Campus" }]}
       >
         <div className="flex flex-wrap justify-center gap-4">
@@ -101,6 +119,68 @@ export default function CampusPage() {
                 <p className="mt-2.5 text-[0.85rem] leading-relaxed text-slate-ink">
                   {body}
                 </p>
+              </RevealItem>
+            ))}
+          </RevealGroup>
+        </div>
+      </section>
+
+      {/* ------------------------ branches in Cameroon ------------------- */}
+      <section className="relative overflow-hidden rounded-[2rem] bg-ink py-20 text-white sm:rounded-[3rem] lg:py-24">
+        <GlowField variant="section" />
+        <div className="container-page relative">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <Eyebrow tone="dark">Our branches in Cameroon</Eyebrow>
+            <h2 className="mt-5 text-[2.1rem] font-extrabold leading-[1.12] sm:text-[2.6rem]">
+              Five campuses, one standard
+            </h2>
+            <p className="mt-5 text-[0.98rem] leading-relaxed text-white/65">
+              Garoua is our main campus. Whichever branch you join, you follow
+              the same programmes under the same MINESUP authorisation.
+            </p>
+          </Reveal>
+
+          <RevealGroup
+            className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            stagger={0.08}
+          >
+            {branches.map((b) => (
+              <RevealItem
+                key={b.city}
+                className={`group relative overflow-hidden rounded-[1.35rem] border p-6 transition-all duration-500 hover:-translate-y-2 ${
+                  b.main
+                    ? "border-gold-400/40 bg-gold-400/10"
+                    : "border-white/10 bg-white/[0.04] hover:border-white/25"
+                }`}
+              >
+                {b.main && (
+                  <span className="absolute right-5 top-5 rounded-full bg-gold-400 px-2.5 py-1 text-[0.6rem] font-bold uppercase tracking-wider text-ink">
+                    Main campus
+                  </span>
+                )}
+                <span
+                  className={`grid size-12 place-items-center rounded-2xl transition-colors duration-500 ${
+                    b.main
+                      ? "bg-gold-400 text-ink"
+                      : "bg-accent-500/15 text-accent-300 ring-1 ring-accent-500/25 group-hover:bg-accent-500 group-hover:text-white"
+                  }`}
+                >
+                  <Building2 className="size-5" />
+                </span>
+                <h3 className="mt-5 text-[1.15rem] font-bold">{b.city}</h3>
+                <p className="mt-1 text-[0.78rem] text-white/50">{b.region}</p>
+                {"note" in b && b.note && (
+                  <p className="mt-2 text-[0.82rem] leading-snug text-white/70">
+                    {b.note}
+                  </p>
+                )}
+                <a
+                  href={`tel:${b.phone.replace(/\s/g, "")}`}
+                  className="mt-4 inline-flex items-center gap-2 text-[0.88rem] font-semibold text-gold-400 transition-colors hover:text-white"
+                >
+                  <Phone className="size-3.5" />
+                  {b.phone}
+                </a>
               </RevealItem>
             ))}
           </RevealGroup>
@@ -152,7 +232,7 @@ export default function CampusPage() {
             </Reveal>
             <Reveal delay={0.08}>
               <h2 className="mt-5 text-[2.1rem] font-extrabold leading-[1.12] text-ink sm:text-[2.6rem]">
-                How to reach the campus
+                How to reach the main campus
               </h2>
             </Reveal>
             <Reveal delay={0.12}>
@@ -171,7 +251,7 @@ export default function CampusPage() {
                     Address
                   </span>
                   <span className="mt-1 block text-[0.9rem] font-semibold text-ink">
-                    {school.campus.line}, Bamenda
+                    {school.campus.line}, {school.campus.city}
                   </span>
                 </span>
               </RevealItem>
@@ -221,7 +301,8 @@ export default function CampusPage() {
                     {school.campus.name}
                   </p>
                   <p className="mt-2 text-[0.85rem] leading-relaxed text-slate-ink">
-                    {school.campus.line} — towards the first gate of PC Ntaghem
+                    {school.campus.line} — near Collège Bilingue de l&rsquo;Espoir,
+                    behind the Governor&rsquo;s office
                   </p>
                   <p className="mt-4 text-[0.7rem] font-semibold uppercase tracking-wide text-slate-ink/50">
                     Interactive map to be embedded

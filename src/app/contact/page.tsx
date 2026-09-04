@@ -10,7 +10,7 @@ import { school } from "@/data/site";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Contact WIPEG Bamenda — phone numbers, email, campus address at Ntambessi and the enquiry form.",
+    "Contact WIPEG — phone numbers, email, the Garoua main campus address and our branches across Cameroon.",
 };
 
 export default function ContactPage() {
@@ -30,7 +30,7 @@ export default function ContactPage() {
     {
       icon: MapPin,
       label: "Campus",
-      lines: [school.campus.line, "Towards the first gate of PC Ntaghem, Bamenda"],
+      lines: [school.campus.line, `${school.campus.city}, North Region, Cameroon`],
       hrefs: [],
     },
     {
@@ -46,7 +46,7 @@ export default function ContactPage() {
       <PageHero
         eyebrow="Contact"
         title="Talk to the WIPEG registry"
-        intro="Call, email or come to the Bamenda campus. If you send an enquiry we will get back to you with the requirements, the fee schedule and the next intake date."
+        intro="Call, email or come to the Garoua main campus. If you send an enquiry we will get back to you with the requirements, the fee schedule and the next intake date."
         breadcrumb={[{ label: "Home", href: "/" }, { label: "Contact" }]}
       />
 

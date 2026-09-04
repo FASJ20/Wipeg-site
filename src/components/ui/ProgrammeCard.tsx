@@ -73,7 +73,7 @@ export function ProgrammeCard({
 
         <div className="mt-auto flex items-center justify-between border-t border-brand-900/8 pt-4">
           <span className="text-[0.78rem] font-semibold text-slate-ink/70">
-            Bamenda Campus
+            Garoua Campus
           </span>
           <span className="flex items-center gap-1.5 text-[0.8rem] font-bold text-brand-800 transition-colors duration-300 group-hover:text-accent-500">
             View department

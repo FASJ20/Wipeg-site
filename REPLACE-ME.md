@@ -12,14 +12,17 @@ Most of them live in one file: **`src/data/site.ts`**.
 
 | Field | Current value | Action |
 | --- | --- | --- |
-| `school.email` | `info@wipeg.cm` | **Invented.** No email appears on either flier. Replace with the real address — it is used in the footer, the contact page and as the target of the enquiry form. |
+| `school.email` | `wipeggaroua@gmail.com` | ✅ **Now real** — taken from the 2026 posters. |
 | `school.hours` | `Mon–Fri 8:00–17:00 · Sat 9:00–13:00` | **Invented.** Confirm the registry's real office hours. |
-| `school.socials` | four `#` links | **Invented.** Add the real Facebook / WhatsApp / Instagram / LinkedIn URLs, or delete the entries you don't have — the footer renders whatever is in the array. |
+| `school.socials` | Facebook and Instagram are `#` | The posters show Facebook, WhatsApp and Instagram icons but never print the handles. WhatsApp is wired to the main phone number; **add the real Facebook and Instagram URLs**. |
 
-Verified from the fliers and safe to leave: name, motto, `AUTH. N° 23-07002/NHA/MINESUP/DDES/ESUP/SDA/MF`,
-MINESUP affiliation, both phone numbers, the Bamenda/Ntambessi campus address,
-all award levels, all ten departments and their courses, the four partner
-institutions, and the four "Why choose WIPEG" offers.
+Verified from the fliers and the 2026 posters, safe to leave: name, motto,
+crest ribbon, `AUTH. N° 23-07002/NHA/MINESUP/DDES/ESUP/SDA/MF`, MINESUP
+affiliation, mentorship by the University of Maroua, affiliation to the
+University of Bamenda, all three phone numbers, the email address, the Garoua
+main campus address, the five branch cities and their numbers, all award
+levels, all ten departments and their courses, the four partner institutions,
+and the four "Why choose WIPEG" offers.
 
 ## 2. Student numbers — `src/data/site.ts` → `stats`
 
@@ -80,17 +83,28 @@ and `/contact`.
 
 ## 11. Logo artwork — `public/brand/`
 
-`wipeg-crest.png` and `minesup.png` were cut out of the flier JPEG, so they are
-only ~94px across and look soft above ~56px. **Ask the school for the original
-vector or high-resolution logo** and overwrite these two files, keeping the same
-names and transparent backgrounds.
+✅ `wipeg-crest.png` is now the official 640px crest supplied by the school,
+cut out with a transparent background. A vector version would still be better
+for print, but this is sharp at every size the site uses.
+
+`minesup.png` is still a ~94px crop from the flier and looks soft above ~56px.
+Replace it if you have the original.
 
 ## 12. Photography — `public/images/`
 
-Every photo is AI-generated (from the `Images/` folder). They are consistent and
-on-brand but they are not the real campus, real students or real staff. Replace
-with real photography when available — keep the same filenames and the whole
-site picks them up. The originals are untouched in `Images/`.
+Files prefixed `real-` are **genuine WIPEG photographs** supplied by the school
+(graduation ceremonies, awards, addresses). They are used on the home hero, the
+about section, the news cards and the campus gallery.
+
+The rest are AI-generated stand-ins, still used for department and programme
+cards. Replace them with real photography of each department when available —
+keep the same filenames and the site picks them up.
+
+**Deliberately not done:** the real photographs are never attached to an
+invented name. The lecturer cards and testimonials still use AI imagery,
+because putting a real, identifiable person's face next to a made-up name and
+quote would misrepresent them. Only swap those to real photos together with
+real names and real consent.
 
 ## 13. Domain — `src/app/layout.tsx`
 

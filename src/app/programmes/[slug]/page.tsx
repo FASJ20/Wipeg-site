@@ -25,7 +25,7 @@ export async function generateMetadata({
   if (!d) return { title: "Department not found" };
   return {
     title: d.name,
-    description: `${d.name} at WIPEG Bamenda — ${d.courses.join(", ")}. ${d.blurb}`,
+    description: `${d.name} at WIPEG Garoua — ${d.courses.join(", ")}. ${d.blurb}`,
   };
 }
 

@@ -7,38 +7,65 @@
    site goes live. See REPLACE-ME.md at the project root for the full list.
 ------------------------------------------------------------------- */
 
-/* ✅ FLIER — identity, accreditation, contact */
+/* ✅ Identity, accreditation and contact — taken from the 2026 campaign
+   posters. GAROUA is the main campus; Bamenda is one of five branches. */
 export const school = {
   short: "WIPEG",
   name: "Wisdom Institute for Professionalism and Excellent Growth",
   motto: "Professionalism & Excellent Growth",
+  /* ✅ POSTER — the ribbon on the official crest */
+  ribbon: "Drivers of Professionalism for Excellence and Growth",
+  /* ✅ POSTER — the strapline that closes the campaign posters */
+  tagline: "WIPEG, a place to be",
   authNumber: "23-07002/NHA/MINESUP/DDES/ESUP/SDA/MF",
   ministry: "Ministry of Higher Education (MINESUP)",
+  /* ✅ POSTER — academic backing, shown top-right on the campus poster */
+  mentoredBy: "University of Maroua",
+  affiliatedTo: "The University of Bamenda",
   awards: [
     "HND / BTS",
     "Bachelors & Masters Degree",
     "Vocational Training",
     "IT Certifications",
   ],
-  phones: ["+237 677 487 127", "+237 653 863 417"],
-  /* 🔶 PLACEHOLDER — no email address appears on the fliers */
-  email: "info@wipeg.cm",
+  phones: ["+237 677 487 127", "+237 675 413 814", "+237 690 779 552"],
+  /* ✅ POSTER — the institute's real address */
+  email: "wipeggaroua@gmail.com",
+  website: "WipegGaroua.com",
   campus: {
-    name: "Bamenda Campus",
-    line: "Ntambessi",
+    name: "Garoua Campus",
+    city: "Garoua",
+    line: "Plateau, behind Collège de l'Espoir",
     detail:
-      "From Ntambessi Junction, towards the first gate of PC Ntaghem, Bamenda, North West Region, Cameroon",
+      "Plateau, behind Collège de l'Espoir (near Collège Bilingue de l'Espoir, behind the Governor's office), Garoua, North Region, Cameroon",
   },
-  /* 🔶 PLACEHOLDER — office hours are not stated on the fliers */
+  /* 🔶 PLACEHOLDER — office hours are still not stated on any material */
   hours: "Monday – Friday, 8:00 – 17:00 · Saturday, 9:00 – 13:00",
-  /* 🔶 PLACEHOLDER — no social handles on the fliers */
+  /* ✅ POSTER — the posters show Facebook, WhatsApp and Instagram icons.
+     🔶 The handles/URLs themselves are not printed, so these still need
+     the real links. */
   socials: [
     { label: "Facebook", href: "#" },
-    { label: "WhatsApp", href: "#" },
+    { label: "WhatsApp", href: "https://wa.me/237677487127" },
     { label: "Instagram", href: "#" },
-    { label: "LinkedIn", href: "#" },
   ],
 } as const;
+
+/* ✅ POSTER — "OUR BRANCHES IN CAMEROON", with the number printed
+   beneath each city. Garoua is the main campus. */
+export const branches = [
+  {
+    city: "Garoua",
+    region: "North Region",
+    phone: "+237 677 487 127",
+    main: true,
+    note: "Plateau, behind Collège de l'Espoir",
+  },
+  { city: "Yaoundé", region: "Centre Region", phone: "+237 682 832 207", main: false },
+  { city: "Maroua", region: "Far North Region", phone: "+237 655 596 057", main: false },
+  { city: "Bamenda", region: "North West Region", phone: "+237 677 487 127", main: false },
+  { city: "Touboro", region: "North Region", phone: "+237 656 894 203", main: false },
+] as const;
 
 /* ------------------------------------------------------------------ */
 /* Departments & programmes — ✅ FLIER, every course listed verbatim   */
@@ -79,10 +106,16 @@ export const departments: Department[] = [
     icon: "Cpu",
     image: "/images/computer-lab.jpg",
     blurb:
-      "Hardware, networks and automation taught on real equipment in the WIPEG computer laboratory.",
+      "Software, networks, security and automation taught on real equipment in the WIPEG computer laboratory.",
     courses: [
+      "Software Engineering",
+      "Network and Security",
       "Computer Science and Networks",
+      "Computer Engineering",
+      "Data Base Management",
+      "Computer Hardware Maintenance",
       "Computer Graphics and Web Design",
+      "E-commerce and Digital Marketing",
       "Industrial Computing and Automation",
     ],
     levels: ["HND / BTS", "Bachelor", "Master"],
@@ -96,14 +129,16 @@ export const departments: Department[] = [
     icon: "Briefcase",
     image: "/images/mentoring.jpg",
     blurb:
-      "Eight management specialisations covering the public sector, private enterprise and the NGO world.",
+      "Ten management specialisations covering the public sector, private enterprise, sport, air transport and the NGO world.",
     courses: [
-      "Project Management",
       "Assistant Manager",
+      "Project Management",
       "Quality Management",
       "Human Resource Management",
       "Logistics and Transport Management",
-      "Management of NGOs",
+      "Operation of Air Transport",
+      "Sport Management",
+      "Management of Non-Governmental Organisations (NGOs)",
       "Information Systems Management",
       "Local Government Management",
     ],
@@ -364,8 +399,19 @@ export const faqs = [
     a: `We partner with ${partners.slice(0, 2).join(", ")}, and two Self-Reliance institutes in Garoua and Toubouro.`,
   },
   {
-    q: "Where is the campus and how do I visit?",
-    a: `Our ${school.campus.name} is at ${school.campus.line} — ${school.campus.detail}. Call ${school.phones[0]} to arrange a visit.`,
+    q: "Where is the main campus and how do I visit?",
+    a: `Our main campus is in ${school.campus.city} — ${school.campus.detail}. Call ${school.phones[0]} to arrange a visit.`,
+  },
+  {
+    q: "Does WIPEG have branches outside Garoua?",
+    a: `Yes. Alongside the ${school.campus.city} main campus we run branches in ${branches
+      .filter((b) => !b.main)
+      .map((b) => b.city)
+      .join(", ")}. Every branch teaches the same programmes under the same authorisation.`,
+  },
+  {
+    q: "Is WIPEG backed by any university?",
+    a: `WIPEG is mentored by the ${school.mentoredBy} and affiliated to ${school.affiliatedTo}, which opens progression routes for our graduates into degree-level study.`,
   },
 ];
 
@@ -376,8 +422,8 @@ export const news = [
     category: "Admissions",
     title: "New academic intake now open across all ten departments",
     excerpt:
-      "Applications are open for HND/BTS, Bachelors, Masters, vocational and IT certification tracks at the Bamenda campus.",
-    image: "/images/graduation.jpg",
+      "Applications are open for HND/BTS, Bachelors, Masters, vocational and IT certification tracks at the Garoua main campus and every branch.",
+    image: "/images/real-graduands-line.jpg",
     date: "12 August 2026",
     author: "WIPEG Admissions",
   },
@@ -397,7 +443,7 @@ export const news = [
     title: "Strengthening our partnership with the University of Bamenda",
     excerpt:
       "Continued collaboration opens further progression routes for WIPEG graduates into degree-level study.",
-    image: "/images/library-group.jpg",
+    image: "/images/real-award.jpg",
     date: "03 July 2026",
     author: "Office of the Director",
   },
@@ -412,7 +458,7 @@ export const admissionSteps = [
   },
   {
     title: "Submit your application",
-    body: "Complete the enquiry form or visit the Bamenda campus registry with your certificates and identification.",
+    body: "Complete the enquiry form or visit the Garoua campus registry — or any branch — with your certificates and identification.",
   },
   {
     title: "Registry review",

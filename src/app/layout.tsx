@@ -23,14 +23,14 @@ export const metadata: Metadata = {
     template: `%s | ${school.short}`,
   },
   description:
-    "WIPEG, the Wisdom Institute for Professionalism and Excellent Growth, Bamenda — HND/BTS, Bachelors and Masters degrees, vocational training and IT certifications across ten academic departments.",
+    "WIPEG, the Wisdom Institute for Professionalism and Excellent Growth — main campus in Garoua, with branches in Yaoundé, Maroua, Bamenda and Touboro. HND/BTS, Bachelors and Masters degrees, vocational training and IT certifications across ten academic departments.",
   keywords: [
     "WIPEG",
     "Wisdom Institute for Professionalism and Excellent Growth",
-    "Bamenda higher institute",
+    "Garoua higher institute",
     "HND Cameroon",
     "BTS Cameroon",
-    "vocational training Bamenda",
+    "vocational training Garoua",
     "IT certifications Cameroon",
   ],
   openGraph: {
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     siteName: school.short,
     title: `${school.short} — ${school.motto}`,
     description:
-      "Ten academic departments. HND/BTS, Bachelors and Masters degrees, vocational training and IT certifications in Bamenda, Cameroon.",
+      "Ten academic departments. HND/BTS, Bachelors and Masters degrees, vocational training and IT certifications in Garoua, Cameroon.",
     images: ["/images/hero-lecture-hall.jpg"],
   },
   icons: {

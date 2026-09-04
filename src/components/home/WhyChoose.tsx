@@ -119,8 +119,8 @@ export function WhyChoose() {
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/25 to-transparent" />
               </div>
               <p className="absolute bottom-5 left-6 right-6 text-[0.95rem] font-semibold leading-snug text-white">
-                Taught on our Bamenda campus — Ntambessi, towards the first gate
-                of PC Ntaghem.
+                Taught at our Garoua main campus — Plateau, behind Collège de
+                l&rsquo;Espoir — and at every branch.
               </p>
             </div>
           </Reveal>

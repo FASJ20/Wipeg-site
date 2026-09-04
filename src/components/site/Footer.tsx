@@ -28,8 +28,8 @@ const contactCards = [
   },
   {
     icon: MapPin,
-    label: "Bamenda Campus",
-    lines: [school.campus.line, "PC Ntaghem road, Bamenda"],
+    label: "Garoua Main Campus",
+    lines: [school.campus.line, `${school.campus.city}, Cameroon`],
     href: "/campus",
   },
 ];
@@ -89,7 +89,7 @@ export function Footer() {
             <p className="mt-6 max-w-md text-sm leading-relaxed text-white/60">
               {school.name} trains students across ten academic departments for
               HND and BTS diplomas, Bachelors and Masters degrees, vocational
-              qualifications and IT certifications — from our Bamenda campus.
+              qualifications and IT certifications — from our Garoua main campus.
             </p>
 
             <div className="mt-6 flex items-center gap-3">
@@ -104,6 +104,9 @@ export function Footer() {
                 Affiliated to the {school.ministry}
                 <br />
                 <span className="text-white/70">AUTH. N° {school.authNumber}</span>
+                <br />
+                Mentored by the {school.mentoredBy} · Affiliated to{" "}
+                {school.affiliatedTo}
               </p>
             </div>
 

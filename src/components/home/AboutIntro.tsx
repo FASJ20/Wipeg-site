@@ -21,8 +21,8 @@ export function AboutIntro() {
         <Reveal direction="right" className="relative">
           <div className="relative aspect-[5/4] w-full overflow-hidden rounded-[2rem] shadow-[var(--shadow-lift)]">
             <Image
-              src="/images/lecturer-values.jpg"
-              alt="A WIPEG lecturer presenting the institute's core values to a class"
+              src="/images/real-ceremony.jpg"
+              alt="The head table at a WIPEG graduation ceremony in Garoua"
               fill
               sizes="(min-width: 1024px) 44vw, 92vw"
               className="object-cover"
@@ -32,8 +32,8 @@ export function AboutIntro() {
           {/* Overlapping secondary image, mirroring the reference layout */}
           <div className="absolute -bottom-10 -right-4 hidden aspect-square w-44 overflow-hidden rounded-[1.5rem] border-[6px] border-white shadow-[var(--shadow-lift)] sm:block lg:-right-8 lg:w-52">
             <Image
-              src="/images/mentoring.jpg"
-              alt="WIPEG students working with a lecturer"
+              src="/images/real-capping.jpg"
+              alt="A WIPEG graduand being capped"
               fill
               sizes="220px"
               className="object-cover"
@@ -103,7 +103,7 @@ export function AboutIntro() {
 
           <Reveal delay={0.14}>
             <p className="mt-6 text-[0.98rem] leading-relaxed text-slate-ink">
-              The {school.name} is a higher and vocational institute in Bamenda,
+              The {school.name} runs its main campus in Garoua,
               operating under authorisation N° {school.authNumber} and affiliated
               to the {school.ministry}. We award HND and BTS diplomas, Bachelors
               and Masters degrees, vocational qualifications and IT

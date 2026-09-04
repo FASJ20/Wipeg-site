@@ -13,7 +13,7 @@ import { departments, school, totalCourses } from "@/data/site";
 export const metadata: Metadata = {
   title: "Programmes",
   description:
-    "All WIPEG programmes across ten academic departments — HND/BTS, Bachelors and Masters degrees, vocational training and IT certifications in Bamenda, Cameroon.",
+    "All WIPEG programmes across ten academic departments — HND/BTS, Bachelors and Masters degrees, vocational training and IT certifications in Garoua, Cameroon.",
 };
 
 export default function ProgrammesPage() {
@@ -22,7 +22,7 @@ export default function ProgrammesPage() {
       <PageHero
         eyebrow="Our programmes"
         title="Ten departments. Every programme WIPEG offers."
-        intro={`${totalCourses} programmes leading to ${school.awards.join(", ")} — all taught at the Bamenda campus.`}
+        intro={`${totalCourses} programmes leading to ${school.awards.join(", ")} — taught at our Garoua main campus and every branch.`}
         breadcrumb={[{ label: "Home", href: "/" }, { label: "Programmes" }]}
       >
         <div className="flex flex-wrap justify-center gap-2">

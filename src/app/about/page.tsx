@@ -14,7 +14,7 @@ import { Icon } from "@/components/ui/Icon";
 export const metadata: Metadata = {
   title: "About the institute",
   description:
-    "WIPEG — the Wisdom Institute for Professionalism and Excellent Growth — is a MINESUP-affiliated higher and vocational institute in Bamenda, Cameroon.",
+    "WIPEG — the Wisdom Institute for Professionalism and Excellent Growth — is a MINESUP-affiliated higher and vocational institute with its main campus in Garoua, Cameroon.",
 };
 
 const values = [
@@ -26,7 +26,7 @@ const values = [
   {
     icon: Eye,
     title: "Our vision",
-    body: "A Bamenda institute whose graduates are recognised across Cameroon for competence, integrity and the discipline to keep learning.",
+    body: "A Garoua institute whose graduates are recognised across Cameroon for competence, integrity and the discipline to keep learning.",
   },
   {
     icon: HeartHandshake,
@@ -41,7 +41,7 @@ export default function AboutPage() {
       <PageHero
         eyebrow="About WIPEG"
         title="Professionalism & Excellent Growth — the standard we hold every programme to"
-        intro={`${school.name} is a higher and vocational institute in Bamenda, operating under authorisation N° ${school.authNumber} and affiliated to the ${school.ministry}.`}
+        intro={`${school.name} runs its main campus in Garoua, with branches in Yaoundé, Maroua, Bamenda and Touboro — operating under authorisation N° ${school.authNumber} and affiliated to the ${school.ministry}.`}
         breadcrumb={[{ label: "Home", href: "/" }, { label: "About" }]}
       />
 
@@ -86,7 +86,7 @@ export default function AboutPage() {
                   WIPEG brings together clinical training, engineering,
                   management, law, information technology, education, home
                   economics, agriculture, business and mining under a single
-                  authorised roof in Bamenda. Whichever department a student
+                  authorised roof in Garoua. Whichever department a student
                   joins, the expectation is the same: supervised practice,
                   lecturers who teach rather than dictate, and a qualification
                   that stands up outside the classroom.

@@ -18,9 +18,9 @@ const slides = [
     eyebrow: "Higher & Vocational Education",
     title: "Professionalism and Excellent Growth",
     highlight: ["Excellent", "Growth"],
-    body: `HND and BTS diplomas, Bachelors and Masters degrees, vocational training and IT certifications — taught at our Bamenda campus under authorisation N° ${school.authNumber.split("/")[0]}.`,
-    image: "/images/hero-1.jpg",
-    alt: "WIPEG graduates in academic gowns on graduation day",
+    body: `HND and BTS diplomas, Bachelors and Masters degrees, vocational training and IT certifications — taught at our Garoua main campus under authorisation N° ${school.authNumber.split("/")[0]}.`,
+    image: "/images/real-hero-portrait.jpg",
+    alt: "WIPEG graduands at the institute's graduation ceremony",
   },
   {
     eyebrow: "Ten Academic Departments",

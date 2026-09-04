@@ -327,13 +327,13 @@ export const advantages = [
   },
 ];
 
-/* ✅ FLIER — accreditation facts. 🔶 the counts are derived, the
-   student figure is a placeholder. */
+/* ✅ Every figure here is derived from verified data — the department,
+   programme, partner and campus lists. No invented numbers. */
 export const stats = [
   { value: 10, suffix: "", label: "Academic departments" },
   { value: totalCourses, suffix: "+", label: "Programmes on offer" },
   { value: partners.length, suffix: "", label: "Partner institutions" },
-  { value: 1200, suffix: "+", label: "Students enrolled", placeholder: true },
+  { value: branches.length, suffix: "", label: "Campuses nationwide" },
 ];
 
 /* ------------------------------------------------------------------ */

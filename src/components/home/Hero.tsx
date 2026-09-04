@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowRight, GraduationCap, Play, Users } from "lucide-react";
+import { ArrowRight, GraduationCap, MapPin, Play } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { GlowField } from "@/components/ui/GlowField";
 import { WordReveal } from "@/components/ui/WordReveal";
-import { school, totalCourses } from "@/data/site";
+import { branches, school, totalCourses } from "@/data/site";
 
 const SLIDE_MS = 7000;
 
@@ -38,13 +38,6 @@ const slides = [
     image: "/images/hero-3.jpg",
     alt: "A WIPEG lecturer teaching a medical sciences class",
   },
-];
-
-const avatars = [
-  "/images/graduation.jpg",
-  "/images/mentoring.jpg",
-  "/images/library-group.jpg",
-  "/images/computer-lab.jpg",
 ];
 
 export function Hero() {
@@ -206,30 +199,22 @@ export function Hero() {
               <div className="absolute inset-0 bg-gradient-to-t from-ink/55 via-transparent to-transparent" />
             </div>
 
-            {/* Floating student-count pill */}
+            {/* Floating campus pill. This slot used to claim a student count
+                that appears on none of the school's material — replaced with
+                the branch network, which the posters do state. */}
             <motion.div
               initial={{ opacity: 0, x: -30, y: 20 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ duration: 0.8, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="animate-float absolute -left-2 bottom-[16%] rounded-2xl border border-white/12 bg-ink/80 p-3.5 shadow-[var(--shadow-lift)] backdrop-blur-xl sm:-left-8"
+              className="animate-float absolute -left-2 bottom-[16%] max-w-[13rem] rounded-2xl border border-white/12 bg-ink/80 p-3.5 shadow-[var(--shadow-lift)] backdrop-blur-xl sm:-left-8"
             >
               <p className="flex items-center gap-1.5 text-[0.78rem] font-bold text-white">
-                <Users className="size-3.5 text-gold-400" />
-                1,200+ Students
+                <MapPin className="size-3.5 text-gold-400" />
+                {branches.length} campuses
               </p>
-              <div className="mt-2.5 flex -space-x-2.5">
-                {avatars.map((a) => (
-                  <span
-                    key={a}
-                    className="relative size-8 overflow-hidden rounded-full ring-2 ring-ink"
-                  >
-                    <Image src={a} alt="" fill sizes="32px" className="object-cover" />
-                  </span>
-                ))}
-                <span className="grid size-8 place-items-center rounded-full bg-accent-500 text-[0.6rem] font-bold text-white ring-2 ring-ink">
-                  +
-                </span>
-              </div>
+              <p className="mt-1.5 text-[0.68rem] leading-snug text-white/60">
+                {branches.map((b) => b.city).join(" · ")}
+              </p>
             </motion.div>
 
             {/* Floating departments chip */}

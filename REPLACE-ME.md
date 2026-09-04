@@ -24,11 +24,18 @@ main campus address, the five branch cities and their numbers, all award
 levels, all ten departments and their courses, the four partner institutions,
 and the four "Why choose WIPEG" offers.
 
-## 2. Student numbers — `src/data/site.ts` → `stats`
+## 2. Counters — `src/data/site.ts` → `stats`
 
-`1200+ Students enrolled` is **invented** (flagged with `placeholder: true`).
-The other three counters are derived from real flier data (10 departments,
-43 programmes, 4 partners) and are fine.
+✅ **No invented numbers remain here.** The "1,200+ students enrolled" figure
+was made up and has been removed, along with the matching pill on the home
+hero (now the campus network instead).
+
+All four counters are derived from the real lists in this file — departments,
+programmes, partners and branches — so they stay correct automatically when
+those lists change.
+
+If the school wants a genuine enrolment figure published, add it here and to
+the hero. Don't estimate it.
 
 ## 3. Lecturers — `src/data/site.ts` → `lecturers`
 

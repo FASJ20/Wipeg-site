@@ -37,12 +37,14 @@ those lists change.
 If the school wants a genuine enrolment figure published, add it here and to
 the hero. Don't estimate it.
 
-## 3. Lecturers — `src/data/site.ts` → `lecturers`
+## 3. Our team — removed for now
 
-All four names and roles are **invented**, and the photos are classroom scenes
-rather than staff portraits. Replace with real heads of department and proper
-headshots (portrait crop, roughly 4:5). Drop the section from
-`src/app/page.tsx` if the school would rather not name staff.
+✅ The "Our team" section is gone, along with its four invented lecturer names
+and its component. Nothing on the site now names a member of staff.
+
+To bring it back later you need, per person: real name, real role, and a
+portrait they have consented to (portrait crop, roughly 4:5). Ask me and I'll
+rebuild it — the design is in git history at commit `bfcf089`.
 
 ## 4. Testimonials — real names, drafted words
 
@@ -139,11 +141,10 @@ The rest are AI-generated stand-ins, still used for department and programme
 cards. Replace them with real photography of each department when available —
 keep the same filenames and the site picks them up.
 
-**Deliberately not done:** the real photographs are never attached to an
-invented name. The lecturer cards and testimonials still use AI imagery,
-because putting a real, identifiable person's face next to a made-up name and
-quote would misrepresent them. Only swap those to real photos together with
-real names and real consent.
+**Deliberately not done:** no photograph is ever attached to an invented
+name. The testimonials show monogram initials rather than faces, because
+pairing a real, identifiable person with a stock or AI portrait would
+misrepresent them. Add a real photo only together with that person's consent.
 
 ## 13. Domain — `src/app/layout.tsx`
 

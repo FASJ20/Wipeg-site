@@ -336,32 +336,6 @@ export const stats = [
   { value: branches.length, suffix: "", label: "Campuses nationwide" },
 ];
 
-/* ------------------------------------------------------------------ */
-/* 🔶 PLACEHOLDER — lecturers. Replace names, roles and photos.        */
-/* ------------------------------------------------------------------ */
-export const lecturers = [
-  {
-    name: "Dr. Ngwa Emmanuel",
-    role: "Head, Medical & Biomedical Sciences",
-    image: "/images/medical-lecture.jpg",
-  },
-  {
-    name: "Mr. Tanyi Bertrand",
-    role: "Head, Computer Engineering & IT",
-    image: "/images/lecturer-values.jpg",
-  },
-  {
-    name: "Mrs. Achu Vivian",
-    role: "Head, Business and Finance",
-    image: "/images/lecturer-programmes.jpg",
-  },
-  {
-    name: "Mr. Fon Nsom Peter",
-    role: "Head, Management & Legal Careers",
-    image: "/images/lecturer-career.jpg",
-  },
-];
-
 /* Testimonials — the NAMES and ROLES below are real, supplied by the school.
    🔶 The QUOTES are drafts written here, not words these people actually
    said. Every one needs the named person to approve or rewrite it before

@@ -5,7 +5,6 @@ import { DepartmentCarousel } from "@/components/home/DepartmentCarousel";
 import { FeaturedProgrammes } from "@/components/home/FeaturedProgrammes";
 import { WhyChoose } from "@/components/home/WhyChoose";
 import { Testimonials } from "@/components/home/Testimonials";
-import { Lecturers } from "@/components/home/Lecturers";
 import { FaqSection } from "@/components/home/FaqSection";
 import { CtaBand } from "@/components/home/CtaBand";
 
@@ -19,7 +18,6 @@ export default function HomePage() {
       <FeaturedProgrammes />
       <WhyChoose />
       <Testimonials />
-      <Lecturers />
       <FaqSection />
       <CtaBand />
     </>

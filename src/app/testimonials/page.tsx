@@ -25,12 +25,12 @@ export default function TestimonialsPage() {
         breadcrumb={[{ label: "Home", href: "/" }, { label: "Testimonials" }]}
       />
 
-      {/* The same section the home page uses, minus its duplicate heading. */}
-      <section className="bg-white py-20 lg:py-24">
-        <div className="container-page">
-          <Testimonials showHeading={false} />
-        </div>
-      </section>
+      {/* The same section the home page uses, minus its duplicate heading.
+          No container-page wrapper here — the component brings its own, and
+          nesting the two double-pads the content. */}
+      <div className="bg-white pt-20 lg:pt-24">
+        <Testimonials showHeading={false} />
+      </div>
 
       {/* ------------------------------- CTA ---------------------------- */}
       <section className="bg-white pb-24 lg:pb-32">

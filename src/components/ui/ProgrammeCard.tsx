@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Clock, GraduationCap, Layers } from "lucide-react";
+import { ArrowUpRight, Clock, GraduationCap, Layers, MapPin, Monitor } from "lucide-react";
 
 import type { Department } from "@/data/site";
 
@@ -48,6 +48,20 @@ export function ProgrammeCard({
               {l}
             </span>
           ))}
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-wide ${
+              department.onlineAvailable
+                ? "bg-brand-800/8 text-brand-800 ring-1 ring-brand-800/15"
+                : "bg-accent-500/10 text-accent-600 ring-1 ring-accent-500/20"
+            }`}
+          >
+            {department.onlineAvailable ? (
+              <Monitor className="size-3" />
+            ) : (
+              <MapPin className="size-3" />
+            )}
+            {department.onlineAvailable ? "Online" : "On campus"}
+          </span>
         </div>
 
         <h3 className="mt-3 text-[1.02rem] font-bold leading-snug text-ink transition-colors duration-300 group-hover:text-brand-800">

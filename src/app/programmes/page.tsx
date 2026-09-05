@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, MapPin, Monitor } from "lucide-react";
 
 import { PageHero } from "@/components/site/PageHero";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Icon } from "@/components/ui/Icon";
 import { Reveal, RevealGroup, RevealItem } from "@/components/ui/Reveal";
-import { departments, school, totalCourses } from "@/data/site";
+import { departments, school, studyModes, totalCourses } from "@/data/site";
 
 export const metadata: Metadata = {
   title: "Programmes",
@@ -50,6 +50,62 @@ export default function ProgrammesPage() {
             </a>
           ))}
         </Reveal>
+      </section>
+
+      {/* How you can study — online vs on campus */}
+      <section className="bg-tint py-16 lg:py-20">
+        <div className="container-page">
+          <Reveal className="mx-auto max-w-3xl text-center">
+            <Eyebrow>How you can study</Eyebrow>
+            <h2 className="mt-5 text-[1.9rem] font-extrabold leading-[1.14] text-ink sm:text-[2.3rem]">
+              Study online from anywhere in Cameroon
+            </h2>
+            <p className="mt-5 text-[0.98rem] leading-relaxed text-slate-ink">
+              {studyModes.onlineIntro} {studyModes.handsOnRule}
+            </p>
+          </Reveal>
+
+          <Reveal delay={0.1} className="mx-auto mt-10 grid max-w-4xl gap-5 sm:grid-cols-2">
+            <div className="rounded-[1.35rem] border border-brand-800/15 bg-white p-6">
+              <span className="grid size-11 place-items-center rounded-2xl bg-brand-800 text-white">
+                <Monitor className="size-5" />
+              </span>
+              <h3 className="mt-4 text-[1rem] font-bold text-ink">
+                Online or on campus
+              </h3>
+              <p className="mt-2 text-[0.85rem] leading-relaxed text-slate-ink">
+                {departments
+                  .filter((d) => d.onlineAvailable)
+                  .map((d) => d.short)
+                  .join(", ")}
+                .
+              </p>
+            </div>
+
+            <div className="rounded-[1.35rem] border border-accent-500/20 bg-white p-6">
+              <span className="grid size-11 place-items-center rounded-2xl bg-accent-500 text-white">
+                <MapPin className="size-5" />
+              </span>
+              <h3 className="mt-4 text-[1rem] font-bold text-ink">
+                On campus only
+              </h3>
+              <p className="mt-2 text-[0.85rem] leading-relaxed text-slate-ink">
+                {departments
+                  .filter((d) => !d.onlineAvailable)
+                  .map((d) => d.short)
+                  .join(", ")}{" "}
+                — these depend on practical work.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.16} className="mx-auto mt-6 max-w-4xl">
+            <p className="flex items-start gap-3 rounded-2xl border border-brand-900/8 bg-white px-5 py-4 text-[0.88rem] font-semibold leading-relaxed text-ink">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-accent-500" />
+              {studyModes.onsiteRule}
+            </p>
+          </Reveal>
+        </div>
       </section>
 
       {/* Department blocks */}
@@ -109,6 +165,22 @@ export default function ProgrammesPage() {
                     ))}
                     <span className="rounded-full bg-accent-50 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-wide text-accent-600">
                       {d.duration}
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[0.68rem] font-bold uppercase tracking-wide ${
+                        d.onlineAvailable
+                          ? "bg-brand-800/8 text-brand-800 ring-1 ring-brand-800/15"
+                          : "bg-accent-500/10 text-accent-600 ring-1 ring-accent-500/20"
+                      }`}
+                    >
+                      {d.onlineAvailable ? (
+                        <Monitor className="size-3" />
+                      ) : (
+                        <MapPin className="size-3" />
+                      )}
+                      {d.onlineAvailable
+                        ? studyModes.onlineLabel
+                        : studyModes.onsiteLabel}
                     </span>
                   </div>
                 </Reveal>

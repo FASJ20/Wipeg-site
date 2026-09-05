@@ -92,6 +92,10 @@ export type Department = {
   /* 🔶 PLACEHOLDER — intake sizes are illustrative */
   duration: string;
   mode: string;
+  /* Can the taught part be followed online from anywhere in Cameroon?
+     False for hands-on fields that require being on campus. Defence and
+     examinations are on site either way — see `studyModes` below. */
+  onlineAvailable: boolean;
 };
 
 export const departments: Department[] = [
@@ -107,6 +111,7 @@ export const departments: Department[] = [
     levels: ["HND / BTS", "Bachelor"],
     duration: "2 – 3 years",
     mode: "Full-time",
+    onlineAvailable: false,
   },
   {
     slug: "computer-engineering",
@@ -130,6 +135,7 @@ export const departments: Department[] = [
     levels: ["HND / BTS", "Bachelor", "Master"],
     duration: "2 – 3 years",
     mode: "Full-time",
+    onlineAvailable: true,
   },
   {
     slug: "management",
@@ -154,6 +160,7 @@ export const departments: Department[] = [
     levels: ["HND / BTS", "Bachelor", "Master"],
     duration: "2 – 3 years",
     mode: "Full-time · Evening",
+    onlineAvailable: true,
   },
   {
     slug: "legal-careers",
@@ -173,6 +180,7 @@ export const departments: Department[] = [
     levels: ["HND / BTS", "Bachelor"],
     duration: "2 – 3 years",
     mode: "Full-time",
+    onlineAvailable: true,
   },
   {
     slug: "it-programs",
@@ -192,6 +200,7 @@ export const departments: Department[] = [
     levels: ["IT Certification", "Vocational Training"],
     duration: "3 – 12 months",
     mode: "Full-time · Evening",
+    onlineAvailable: true,
   },
   {
     slug: "education",
@@ -209,6 +218,7 @@ export const departments: Department[] = [
     levels: ["HND / BTS", "Bachelor", "Master"],
     duration: "2 – 3 years",
     mode: "Full-time",
+    onlineAvailable: true,
   },
   {
     slug: "home-economics",
@@ -226,6 +236,7 @@ export const departments: Department[] = [
     levels: ["Vocational Training", "HND / BTS"],
     duration: "1 – 2 years",
     mode: "Full-time",
+    onlineAvailable: false,
   },
   {
     slug: "agricultural-food-sciences",
@@ -245,6 +256,7 @@ export const departments: Department[] = [
     levels: ["HND / BTS", "Bachelor"],
     duration: "2 – 3 years",
     mode: "Full-time",
+    onlineAvailable: false,
   },
   {
     slug: "business-and-finance",
@@ -264,6 +276,7 @@ export const departments: Department[] = [
     levels: ["HND / BTS", "Bachelor", "Master"],
     duration: "2 – 3 years",
     mode: "Full-time · Evening",
+    onlineAvailable: true,
   },
   {
     slug: "mining-petroleum-engineering",
@@ -281,8 +294,28 @@ export const departments: Department[] = [
     levels: ["HND / BTS", "Bachelor"],
     duration: "2 – 3 years",
     mode: "Full-time",
+    onlineAvailable: false,
   },
 ];
+
+/* ✅ SCHOOL — how programmes are delivered.
+   🔶 The split below is my reading of "fields that really need hands-on":
+   medical, agriculture, home economics and mining. Confirm the exact list
+   with the registry — flip `onlineAvailable` on any department to correct
+   it and every page updates. */
+export const studyModes = {
+  onlineIntro:
+    "Most WIPEG programmes can be followed online from anywhere in Cameroon, so you can study without relocating to Garoua.",
+  onsiteRule:
+    "Defence and examinations are always written on site — never online — whichever way you study.",
+  handsOnRule:
+    "Fields that depend on practical work stay on campus: nursing and the other medical programmes, agriculture, home economics and mining.",
+  onlineLabel: "Online or on campus",
+  onsiteLabel: "On campus only",
+} as const;
+
+export const onlineDepartments = departments.filter((d) => d.onlineAvailable);
+export const onsiteDepartments = departments.filter((d) => !d.onlineAvailable);
 
 export const totalCourses = departments.reduce(
   (n, d) => n + d.courses.length,
@@ -394,6 +427,14 @@ export const faqs = [
   {
     q: "Which institutions does WIPEG work with?",
     a: `We work with ${partners.length} institutions — ${partners.slice(0, 2).join(", ")}, HIPTEX in Garoua, and the Self-Reliance institutes in Garoua and Touboro.`,
+  },
+  {
+    q: "Can I study online?",
+    a: `${studyModes.onlineIntro} ${studyModes.handsOnRule} ${studyModes.onsiteRule}`,
+  },
+  {
+    q: "Do I have to come to campus for exams?",
+    a: "Yes. Defence and examinations are always written on site, including for students following a programme online. Everything else — lectures, coursework and supervision — can be done remotely on the online-available programmes.",
   },
   {
     q: "Where is the main campus and how do I visit?",

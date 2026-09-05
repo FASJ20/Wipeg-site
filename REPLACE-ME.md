@@ -75,6 +75,30 @@ their entry — the component switches from initials to the photo automatically.
 If the school wants a news feed later, that is a real feature to build (a blog
 with its own pages), not three cards linking to the contact page.
 
+## 5b. Online study — confirm which departments qualify
+
+✅ The rule itself is from the school: most programmes can be followed online
+from anywhere in Cameroon; hands-on fields stay on campus; **defence and
+examinations are always written on site**, online students included.
+
+🔶 **The split between the two is my reading**, not something the school
+stated department by department:
+
+| On campus only | Online or on campus |
+| --- | --- |
+| Medical & Biomedical Sciences | Computer Engineering |
+| Home Economics | Management |
+| Agricultural and Food Sciences | Legal Careers |
+| Mining and Petroleum Engineering | IT Programs, Education, Business & Finance |
+
+Computer Engineering is the doubtful one — software and networks travel well
+online, but Computer Hardware Maintenance and Industrial Computing and
+Automation need lab time. Confirm with the registry.
+
+**To correct any of it:** flip `onlineAvailable` on that department in
+`src/data/site.ts`. The chips, the department page callout and the
+programmes-page summary all follow automatically.
+
 ## 6. Entry requirements — `src/data/site.ts` → `entryRequirements`
 
 A plausible list based on the Cameroonian system, **not** taken from the

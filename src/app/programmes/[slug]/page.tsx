@@ -2,14 +2,29 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, ArrowUpRight, Check, Clock, GraduationCap, Layers } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  Clock,
+  GraduationCap,
+  Layers,
+  MapPin,
+  Monitor,
+} from "lucide-react";
 
 import { PageHero } from "@/components/site/PageHero";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Icon } from "@/components/ui/Icon";
 import { Reveal, RevealGroup, RevealItem } from "@/components/ui/Reveal";
-import { advantages, departments, entryRequirements, school } from "@/data/site";
+import {
+  advantages,
+  departments,
+  entryRequirements,
+  school,
+  studyModes,
+} from "@/data/site";
 
 export function generateStaticParams() {
   return departments.map((d) => ({ slug: d.slug }));
@@ -43,6 +58,13 @@ export default async function DepartmentPage({
   const facts = [
     { icon: Clock, label: "Duration", value: dept.duration },
     { icon: GraduationCap, label: "Study mode", value: dept.mode },
+    {
+      icon: dept.onlineAvailable ? Monitor : MapPin,
+      label: "Delivery",
+      value: dept.onlineAvailable
+        ? studyModes.onlineLabel
+        : studyModes.onsiteLabel,
+    },
     { icon: Layers, label: "Programmes", value: `${dept.courses.length} on offer` },
   ];
 
@@ -91,7 +113,7 @@ export default async function DepartmentPage({
               </div>
             </Reveal>
 
-            <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-3">
+            <RevealGroup className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {facts.map(({ icon: Ico, label, value }) => (
                 <RevealItem
                   key={label}
@@ -105,6 +127,41 @@ export default async function DepartmentPage({
                 </RevealItem>
               ))}
             </RevealGroup>
+
+            {/* How this department is actually delivered */}
+            <Reveal className="mt-6">
+              <div
+                className={`flex items-start gap-4 rounded-2xl border p-5 ${
+                  dept.onlineAvailable
+                    ? "border-brand-800/15 bg-brand-50/70"
+                    : "border-accent-500/20 bg-accent-50/60"
+                }`}
+              >
+                <span
+                  className={`grid size-11 shrink-0 place-items-center rounded-full text-white ${
+                    dept.onlineAvailable ? "bg-brand-800" : "bg-accent-500"
+                  }`}
+                >
+                  {dept.onlineAvailable ? (
+                    <Monitor className="size-5" />
+                  ) : (
+                    <MapPin className="size-5" />
+                  )}
+                </span>
+                <div>
+                  <p className="text-[0.95rem] font-bold text-ink">
+                    {dept.onlineAvailable
+                      ? `Study ${dept.short} online from anywhere in Cameroon`
+                      : `${dept.short} is taught on campus`}
+                  </p>
+                  <p className="mt-1.5 text-[0.85rem] leading-relaxed text-slate-ink">
+                    {dept.onlineAvailable
+                      ? studyModes.onsiteRule
+                      : `This field depends on practical work, so the programme runs on site. ${studyModes.onsiteRule}`}
+                  </p>
+                </div>
+              </div>
+            </Reveal>
 
             <Reveal className="mt-12">
               <Eyebrow>Programmes offered</Eyebrow>

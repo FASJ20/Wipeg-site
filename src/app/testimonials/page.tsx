@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { ArrowRight, Phone } from "lucide-react";
+import { ArrowRight, Check, Phone } from "lucide-react";
 
 import { PageHero } from "@/components/site/PageHero";
 import { Testimonials } from "@/components/home/Testimonials";
+import { TestimonialForm } from "@/components/site/TestimonialForm";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { GlowField } from "@/components/ui/GlowField";
@@ -23,7 +24,12 @@ export default function TestimonialsPage() {
         title="What our graduates say"
         intro="WIPEG graduates working across software, marketing and entertainment on what the institute actually gave them."
         breadcrumb={[{ label: "Home", href: "/" }, { label: "Testimonials" }]}
-      />
+      >
+        <Button href="#share" variant="accent" size="lg">
+          Share your testimonial
+          <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
+        </Button>
+      </PageHero>
 
       {/* The same section the home page uses, minus its duplicate heading.
           No container-page wrapper here — the component brings its own, and
@@ -31,6 +37,55 @@ export default function TestimonialsPage() {
       <div className="bg-white pt-20 lg:pt-24">
         <Testimonials showHeading={false} />
       </div>
+
+      {/* ------------------------ share your own ------------------------ */}
+      <section id="share" className="scroll-mt-24 bg-tint py-24 lg:py-32">
+        <div className="container-page grid gap-14 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
+          <div>
+            <Reveal>
+              <Eyebrow>Share yours</Eyebrow>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <h2 className="mt-5 text-[2.1rem] font-extrabold leading-[1.12] text-ink sm:text-[2.6rem]">
+                Studied at WIPEG? Tell your story
+              </h2>
+            </Reveal>
+            <Reveal delay={0.12}>
+              <p className="mt-5 text-[0.95rem] leading-relaxed text-slate-ink">
+                If WIPEG played a part in where you are now, write it in your
+                own words. We publish testimonials as they were written, with
+                your name and what you do today.
+              </p>
+            </Reveal>
+
+            <Reveal delay={0.18}>
+              <ul className="mt-8 flex flex-col gap-3">
+                {[
+                  "Write it yourself — we don't rewrite your words.",
+                  "Nothing appears on the site until you have agreed to it.",
+                  "The registry checks each one before it is published.",
+                ].map((line) => (
+                  <li
+                    key={line}
+                    className="flex items-start gap-3 text-[0.9rem] leading-relaxed text-ink/85"
+                  >
+                    <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-accent-500 text-white">
+                      <Check className="size-3" strokeWidth={3.5} />
+                    </span>
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          </div>
+
+          <Reveal direction="left" delay={0.1}>
+            <div className="rounded-[1.75rem] border border-brand-900/8 bg-white p-7 sm:p-9">
+              <TestimonialForm />
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
       {/* ------------------------------- CTA ---------------------------- */}
       <section className="bg-white pb-24 lg:pb-32">

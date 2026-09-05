@@ -61,7 +61,9 @@ person must approve or rewrite their own quote before this site is published —
 attributing invented words to a real, identifiable person is exactly the
 problem the removed placeholders had.
 
-Edit them in `src/data/site.ts` → `testimonials`.
+Edit them in `src/data/site.ts` → `testimonials`. The cleanest fix is to send
+these three the `/testimonials` page and let them submit their own words
+through the form there — see section 10.
 
 **Photos:** deliberately none. The section shows initials (FA, FS, VR) rather
 than pairing a real name with a stock or AI face. When you have a real portrait
@@ -136,15 +138,28 @@ Note: the embed required `frame-src https://www.google.com` in the CSP
 (`next.config.ts`). Without it the iframe is blocked silently — an empty box,
 no console error.
 
-## 10. The enquiry form — `src/components/site/EnquiryForm.tsx`
+## 10. The forms — `src/components/site/`
 
-**Front-end only.** Submitting opens the visitor's mail client addressed to
-`school.email`. It does not send anything by itself and nothing is stored.
+Both are **front-end only**. Submitting opens the visitor's mail client
+addressed to `school.email`; nothing is sent by itself and nothing is stored.
 
-To make it actually send, replace the body of `handleSubmit` with a POST to an
-endpoint — [Formspree](https://formspree.io), [Web3Forms](https://web3forms.com),
-or your own `app/api/enquiry/route.ts`. The form is used on both `/admissions`
-and `/contact`.
+| Form | Used on | Sends to |
+| --- | --- | --- |
+| `EnquiryForm.tsx` | `/admissions`, `/contact` | Application enquiries |
+| `TestimonialForm.tsx` | `/testimonials` | Graduate testimonials |
+
+To make them actually send, replace the body of `handleSubmit` with a POST to
+an endpoint — [Formspree](https://formspree.io), [Web3Forms](https://web3forms.com),
+or your own `app/api/*/route.ts`.
+
+**How a submitted testimonial reaches the site:** it does not, automatically —
+by design. The email lands with the registry, someone reads it, and adds it to
+`testimonials` in `src/data/site.ts`. That review step is what keeps a real
+person's name off the site until they meant it to be there.
+
+The form captures consent explicitly: the sender must tick a box agreeing WIPEG
+may publish the testimonial with their name, and that agreement is recorded in
+the email body. **Do not publish a testimonial that arrived without it.**
 
 ## 11. Logo artwork — `public/brand/`
 

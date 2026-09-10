@@ -5,14 +5,21 @@
 --  Scope: student data only. Fees and payments are deliberately NOT here yet;
 --  they attach later without changing anything below.
 --
---  The one idea this schema is built around:
+--  TWO IDEAS THIS SCHEMA IS BUILT AROUND
 --
---      A STUDENT IS A PERSON.  WHAT THEY STUDY IS A SEPARATE, CHANGING THING.
+--  1. A STUDENT IS A PERSON. WHAT THEY STUDY IS A SEPARATE, CHANGING THING.
+--     `students` holds who someone is (changes almost never). `enrolments`
+--     holds what they are studying this year (changes every year). One person
+--     keeps one student row for life and gains an enrolment row each year.
+--     That is what makes transcripts and "who ever studied X" answerable.
 --
---  So `students` holds who someone is (changes almost never) and `enrolments`
---  holds what they are studying this year (changes every year). One person has
---  one student row for life and a new enrolment row each year. That is what
---  makes history, transcripts and "who ever studied X" possible.
+--  2. LEVEL 1 IS SHARED ACROSS A DEPARTMENT; STUDENTS SPLIT AT LEVEL 2.
+--     So a class is keyed by the DEPARTMENT at Level 1 —
+--         "Computer Engineering, Level 1, Garoua, 2026/27"
+--     and by the SPECIALISATION from Level 2 upward —
+--         "Software Engineering, Level 2, Garoua, 2027/28".
+--     `classes.programme_id` is therefore null at Level 1 and required above
+--     it, enforced by a CHECK so it cannot be got wrong by accident.
 --
 --  Run with:  psql "$DATABASE_URL" -f db/schema.sql
 -- ============================================================================
@@ -52,30 +59,37 @@ CREATE TABLE campuses (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
+-- A department is what a student joins at Level 1 and stays in for the whole
+-- programme: Computer Engineering, Medical & Biomedical Sciences, and so on.
 CREATE TABLE departments (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug        text NOT NULL UNIQUE,          -- matches the website: 'computer-engineering'
+  code        text NOT NULL UNIQUE,          -- 'CEN', 'MED' — short, for labels
   name        text NOT NULL,                 -- 'Computer Engineering'
   is_active   boolean NOT NULL DEFAULT true,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
--- A programme is the specialisation a student actually enrols in — Software
--- Engineering, Nursing, Midwifery — not the department above it. This is the
--- level your rule works at: a Level 1 Software Engineering student has no
--- business in a Level 1 Nursing class.
+-- A programme is the specialisation a student chooses at Level 2 — Software
+-- Engineering, Network and Security, Nursing, Midwifery. Nobody is enrolled
+-- in one of these at Level 1.
 CREATE TABLE programmes (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   department_id   uuid NOT NULL REFERENCES departments(id),
-  code            text NOT NULL UNIQUE,      -- 'SWE', 'NUR' — used in the matricule if wanted
+  code            text NOT NULL UNIQUE,      -- 'SWE', 'NUR'
   name            text NOT NULL,             -- 'Software Engineering'
   online_available boolean NOT NULL DEFAULT true,
   is_active       boolean NOT NULL DEFAULT true,
-  created_at      timestamptz NOT NULL DEFAULT now()
+  created_at      timestamptz NOT NULL DEFAULT now(),
+
+  -- Lets `classes` prove that a specialisation really belongs to the
+  -- department the class is under — see the composite foreign key below.
+  UNIQUE (id, department_id)
 );
 
--- Levels run 1-5 continuously across awards, as you confirmed. Kept as a table
--- rather than hard-coded so "Level 3 = Bachelor" lives in exactly one place.
+-- Levels run 1-5 continuously across awards, as confirmed by the registry.
+-- Kept as a table rather than hard-coded so "Level 3 = Bachelor" lives in
+-- exactly one place.
 CREATE TABLE levels (
   level       smallint PRIMARY KEY CHECK (level BETWEEN 1 AND 5),
   award       text NOT NULL,                 -- 'HND / BTS', 'Bachelor', 'Master'
@@ -104,15 +118,26 @@ CREATE UNIQUE INDEX one_current_academic_year
 
 
 -- ===========================================================================
---  CLASSES — the four-part key
---  campus x programme x level x academic year. One class = one Google
---  Classroom, later on. Online and on-campus students share it.
+--  CLASSES
+--
+--  Level 1  →  campus x DEPARTMENT     x level x year   (programme_id IS NULL)
+--  Level 2+ →  campus x SPECIALISATION x level x year   (programme_id set)
+--
+--  One class becomes one Google Classroom later. Online and on-campus
+--  students share it.
 -- ===========================================================================
 
 CREATE TABLE classes (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   campus_id         uuid NOT NULL REFERENCES campuses(id),
-  programme_id      uuid NOT NULL REFERENCES programmes(id),
+
+  -- Always set, at every level. A specialisation never leaves its department.
+  department_id     uuid NOT NULL REFERENCES departments(id),
+
+  -- Null at Level 1, where the whole department is taught together.
+  -- Required from Level 2, where students have chosen a specialisation.
+  programme_id      uuid,
+
   level             smallint NOT NULL REFERENCES levels(level),
   academic_year_id  uuid NOT NULL REFERENCES academic_years(id),
 
@@ -124,12 +149,33 @@ CREATE TABLE classes (
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
 
-  -- The same class cannot be created twice.
-  UNIQUE (campus_id, programme_id, level, academic_year_id)
+  -- The Level 1 rule, enforced by the database rather than by good intentions.
+  CONSTRAINT level_one_is_department_wide CHECK (
+    (level = 1 AND programme_id IS NULL) OR
+    (level > 1 AND programme_id IS NOT NULL)
+  ),
+
+  -- A Nursing class can never be filed under Computer Engineering: the
+  -- programme must belong to the department named on the same row.
+  FOREIGN KEY (programme_id, department_id)
+    REFERENCES programmes (id, department_id)
 );
 
 CREATE TRIGGER classes_touch BEFORE UPDATE ON classes
   FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
+-- Two partial indexes rather than one UNIQUE, because PostgreSQL treats NULLs
+-- as distinct — a plain unique constraint would happily allow the same Level 1
+-- class to be created over and over.
+CREATE UNIQUE INDEX classes_unique_level_one
+  ON classes (campus_id, department_id, level, academic_year_id)
+  WHERE programme_id IS NULL;
+
+CREATE UNIQUE INDEX classes_unique_specialised
+  ON classes (campus_id, programme_id, level, academic_year_id)
+  WHERE programme_id IS NOT NULL;
+
+CREATE INDEX classes_year ON classes (academic_year_id);
 
 
 -- ===========================================================================
@@ -172,10 +218,10 @@ CREATE TABLE students (
   address_town      text,
   address_detail    text,
 
-  -- Required for every student, as you asked. For an adult student this is
-  -- their next of kin / emergency contact; for a minor it is the guardian.
-  -- Age is calculated from date_of_birth — never stored, because a stored
-  -- "is a minor" flag is correct the day you write it and wrong after.
+  -- Required for every student, as the registry asked. For an adult student
+  -- this is their next of kin / emergency contact; for a minor it is the
+  -- guardian. Age is calculated from date_of_birth — never stored, because a
+  -- stored "is a minor" flag is correct the day you write it and wrong after.
   guardian_name     text NOT NULL,
   guardian_phone    text NOT NULL CHECK (guardian_phone ~ '^\+[0-9]{8,15}$'),
   guardian_relation text,                    -- 'Mother', 'Uncle', 'Spouse'
@@ -201,14 +247,17 @@ CREATE TRIGGER students_touch BEFORE UPDATE ON students
 CREATE UNIQUE INDEX students_personal_email_lower
   ON students (lower(personal_email)) WHERE personal_email IS NOT NULL;
 
-CREATE INDEX students_phone       ON students (phone);
-CREATE INDEX students_surname     ON students (lower(surname));
-CREATE INDEX students_status      ON students (status);
+CREATE INDEX students_phone   ON students (phone);
+CREATE INDEX students_surname ON students (lower(surname));
+CREATE INDEX students_status  ON students (status);
 
 
 -- ===========================================================================
 --  ENROLMENTS — what they are studying, this year
 --  A student who does Level 1, Level 2 then a Bachelor has three of these.
+--  Their Level 1 row points at a department class; the later ones point at
+--  their chosen specialisation. The choice of specialisation is therefore
+--  recorded simply by which class they enrolled in at Level 2.
 -- ===========================================================================
 
 CREATE TABLE enrolments (
@@ -242,7 +291,8 @@ CREATE TRIGGER enrolments_touch BEFORE UPDATE ON enrolments
 CREATE INDEX enrolments_class   ON enrolments (class_id);
 CREATE INDEX enrolments_student ON enrolments (student_id);
 
--- A student can only be in one active class at a time.
+-- A student can only be in one active class at a time. Relax this if WIPEG
+-- ever lets someone follow two programmes at once.
 CREATE UNIQUE INDEX enrolments_one_active_per_student
   ON enrolments (student_id) WHERE status = 'active';
 
@@ -260,13 +310,25 @@ CREATE TABLE applications (
   -- Null until the application is accepted and a student record is created.
   student_id          uuid REFERENCES students(id),
 
-  -- What they are applying for
+  -- What they are applying for. At Level 1 they apply to a department; the
+  -- specialisation is optional there and recorded only as a preference, which
+  -- is useful for guessing how big each Level 2 class will need to be.
   campus_id           uuid NOT NULL REFERENCES campuses(id),
-  programme_id        uuid NOT NULL REFERENCES programmes(id),
+  department_id       uuid NOT NULL REFERENCES departments(id),
+  programme_id        uuid,
   level_applied       smallint NOT NULL REFERENCES levels(level),
   academic_year_id    uuid NOT NULL REFERENCES academic_years(id),
   delivery_mode       text NOT NULL DEFAULT 'on_campus'
                         CHECK (delivery_mode IN ('on_campus', 'online')),
+
+  -- Entering above Level 1 means joining a specialisation directly, so it has
+  -- to be named.
+  CONSTRAINT specialisation_required_above_level_one CHECK (
+    level_applied = 1 OR programme_id IS NOT NULL
+  ),
+
+  FOREIGN KEY (programme_id, department_id)
+    REFERENCES programmes (id, department_id),
 
   -- What they typed at the time, kept exactly as submitted even if the
   -- student record is later corrected. This is the record of what was claimed.
@@ -288,7 +350,7 @@ CREATE TABLE applications (
   submitted_at        timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now(),
 
-  CHECK (status NOT IN ('accepted') OR student_id IS NOT NULL)
+  CHECK (status <> 'accepted' OR student_id IS NOT NULL)
 );
 
 CREATE TRIGGER applications_touch BEFORE UPDATE ON applications
@@ -337,12 +399,13 @@ CREATE INDEX documents_kind    ON documents (student_id, kind);
 
 
 -- ===========================================================================
---  A COUPLE OF VIEWS
+--  VIEWS
 --  So the everyday questions are one short query, not a join written from
 --  memory each time.
 -- ===========================================================================
 
--- Everyone currently studying, with where and what.
+-- Everyone currently studying, with where and what. `programme` reads
+-- "Level 1 (shared)" for first-year students, who have not chosen yet.
 CREATE VIEW current_students AS
 SELECT
   s.id                AS student_id,
@@ -354,7 +417,7 @@ SELECT
   date_part('year', age(s.date_of_birth))::int AS age,
   c.name              AS campus,
   d.name              AS department,
-  p.name              AS programme,
+  COALESCE(p.name, 'Level 1 (shared)') AS programme,
   cl.level,
   l.award,
   ay.label            AS academic_year,
@@ -363,8 +426,8 @@ FROM enrolments e
 JOIN students        s  ON s.id  = e.student_id
 JOIN classes         cl ON cl.id = e.class_id
 JOIN campuses        c  ON c.id  = cl.campus_id
-JOIN programmes      p  ON p.id  = cl.programme_id
-JOIN departments     d  ON d.id  = p.department_id
+JOIN departments     d  ON d.id  = cl.department_id
+LEFT JOIN programmes p  ON p.id  = cl.programme_id      -- null at Level 1
 JOIN levels          l  ON l.level = cl.level
 JOIN academic_years  ay ON ay.id = cl.academic_year_id
 WHERE e.status = 'active';
@@ -372,5 +435,21 @@ WHERE e.status = 'active';
 -- The list you will want every exam period: who has to travel in.
 CREATE VIEW online_students_for_exams AS
 SELECT * FROM current_students WHERE delivery_mode = 'online';
+
+-- Level 1 students and the specialisation they said they wanted, so you can
+-- size next year's Level 2 classes before you have to create them.
+CREATE VIEW level_one_specialisation_interest AS
+SELECT
+  c.name              AS campus,
+  d.name              AS department,
+  COALESCE(p.name, 'Undecided') AS intended_programme,
+  count(*)            AS applicants
+FROM applications a
+JOIN campuses        c ON c.id = a.campus_id
+JOIN departments     d ON d.id = a.department_id
+LEFT JOIN programmes p ON p.id = a.programme_id
+WHERE a.level_applied = 1
+  AND a.status IN ('submitted', 'reviewing', 'accepted')
+GROUP BY c.name, d.name, COALESCE(p.name, 'Undecided');
 
 COMMIT;

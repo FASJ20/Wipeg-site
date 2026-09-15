@@ -15,4 +15,7 @@ preview-home.png
 #   template used purely as a design reference; it is not ours to redistribute.
 # - The fliers and AI photos are already derived into public/images and
 #   public/brand, so the originals would only bloat the repo (~17 MB).
-Images/
+# Anchored to the repo root on purpose. An unanchored "Images/" also matched
+# public/images/ on Windows, where git ignores case — which silently dropped
+# every photo added after the rule and broke the deployed site.
+/Images/

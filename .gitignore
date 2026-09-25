@@ -19,3 +19,8 @@ preview-home.png
 # public/images/ on Windows, where git ignores case — which silently dropped
 # every photo added after the rule and broke the deployed site.
 /Images/
+
+# Third-party agent skills, installed with `npx skills add`. The versions are
+# recorded in skills-lock.json, so these can be reinstalled rather than vendored.
+/.agents/
+/.claude/skills/

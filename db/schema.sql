@@ -13,7 +13,7 @@
 --    2. CALENDAR    when it is offered     — edited once a year, by hand
 --    3. PEOPLE      who is involved        — one row per human, for life
 --    4. DELIVERY    who is taught what     — changes constantly
---    5. MONEY       what is owed and paid  — append-only, never edited
+--    5. MONEY       what is owed and received — append-only, never edited
 --
 --  A table may only depend on the layers above it. Nothing in the catalogue
 --  knows a student exists. That is what makes it safe to edit in August.
@@ -32,7 +32,7 @@
 --
 --  3. A STATUS THAT CAN BE CALCULATED IS NEVER STORED.
 --     There is no fee status column anywhere. Whether a student has paid is
---     charges minus payments, computed on read by the `fee_status` view. A
+--     charges minus receipts, computed on read by the `fee_status` view. A
 --     stored status is correct the day you write it and wrong the next.
 -- ============================================================================
 
@@ -340,6 +340,35 @@ CREATE INDEX staff_departments_department ON staff_departments (department_id);
 CREATE UNIQUE INDEX staff_departments_one_head
   ON staff_departments (department_id) WHERE is_head;
 
+-- What a member of staff may DO in the system, which is not the same thing as
+-- what is printed on their card. `staff.job_title` is free text and varies by
+-- campus; permission has to be an exact, closed list the API can compare
+-- against, so it lives here. Teaching a class comes from
+-- `teaching_assignments` and heading a department from
+-- `staff_departments.is_head` — both are already facts, so neither is
+-- repeated as a role here. See db/API.md for what each role can reach.
+CREATE TABLE staff_roles (
+  staff_id      uuid NOT NULL REFERENCES staff(person_id) ON DELETE CASCADE,
+  role          text NOT NULL CHECK (role IN ('registrar',       -- academic records
+                                              'bursar',          -- fees
+                                              'admissions',      -- the funnel
+                                              'administrator')), -- all of it, grants roles
+  granted_on    date NOT NULL DEFAULT CURRENT_DATE,
+  granted_by    uuid REFERENCES staff(person_id) ON DELETE RESTRICT,
+
+  -- Revoked, not deleted: who could approve a fee waiver last March is a
+  -- question that gets asked after the fact.
+  revoked_on    date,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+
+  PRIMARY KEY (staff_id, role),
+  CHECK (revoked_on IS NULL OR revoked_on >= granted_on)
+);
+
+-- The one index authorisation needs: every request resolves a signed-in
+-- person to their live roles.
+CREATE INDEX staff_roles_live ON staff_roles (staff_id) WHERE revoked_on IS NULL;
+
 -- Certificates, photos and IDs, for students and staff alike — a lecturer's
 -- degree certificate is filed exactly like a student's birth certificate.
 -- The file itself lives in storage; only the reference is here, because a
@@ -633,6 +662,11 @@ CREATE INDEX admission_contacts_admission ON admission_contacts (admission_id, c
 --
 --  Amounts are whole francs in `bigint`. XAF has no subunit, so an integer is
 --  already exact — the usual reason for DECIMAL does not arise. See DESIGN.md.
+--
+--  NO MONEY MOVES THROUGH THIS SYSTEM. Fees are paid at the bursary, into the
+--  bank, or by Mobile Money to WIPEG's own number. This layer records what was
+--  agreed and what arrived; it never takes a payment. There is therefore no
+--  gateway, no webhook, no card data and no stored account number.
 -- ###########################################################################
 
 -- What a given group is charged in a given year. Different programmes have
@@ -717,60 +751,54 @@ CREATE TRIGGER student_charges_touch BEFORE UPDATE ON student_charges
 CREATE INDEX student_charges_enrolment ON student_charges (enrolment_id);
 CREATE INDEX student_charges_due       ON student_charges (due_on) WHERE NOT waived;
 
--- Money that actually moved. Three figures, because with Mobile Money they are
--- three different numbers and confusing them is how books stop balancing:
---
---   amount_charged  left the student's wallet
---   provider_fee    MTN or Orange kept this  (the student bears it)
---   amount_received reached WIPEG — the only figure that reduces a balance
---
--- Never updated after the fact. A mistake is corrected by a reversing row.
-CREATE TABLE payments (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id        uuid NOT NULL REFERENCES students(person_id) ON DELETE RESTRICT,
-  enrolment_id      uuid REFERENCES enrolments(id) ON DELETE RESTRICT,
+-- Money WIPEG has already received. No payment is taken on this system: a
+-- student pays at the bursary, into the bank, or by Mobile Money to WIPEG's
+-- own number, and the bursar enters what came in. So there is no provider
+-- fee, no gateway reference and no 'pending' state — the money is in hand
+-- before the row exists, which is why a single `amount` is enough.
+CREATE TABLE fee_receipts (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  enrolment_id    uuid NOT NULL REFERENCES enrolments(id) ON DELETE RESTRICT,
 
-  method            text NOT NULL CHECK (method IN ('mtn_momo', 'orange_money',
-                                                    'bank_transfer', 'card', 'cash')),
+  -- The number on the paper receipt or the bank slip. UNIQUE is the only
+  -- defence against the same payment being keyed in twice by two people.
+  receipt_no      text UNIQUE,
 
-  amount_charged    bigint NOT NULL CHECK (amount_charged > 0),
-  provider_fee      bigint NOT NULL DEFAULT 0 CHECK (provider_fee >= 0),
-  amount_received   bigint NOT NULL CHECK (amount_received > 0),
-  currency          text NOT NULL DEFAULT 'XAF' CHECK (currency = 'XAF'),
+  amount          bigint NOT NULL,
+  currency        text NOT NULL DEFAULT 'XAF' CHECK (currency = 'XAF'),
 
-  -- The provider's own reference. UNIQUE is what makes the payment webhook
-  -- safe to retry: the same notification arriving twice cannot be banked twice.
-  provider_reference text UNIQUE,
+  -- Where the money was handed over. Recorded so the bursar can reconcile
+  -- against the bank statement and the MoMo history — it is a note about
+  -- something that already happened, not an integration.
+  method          text NOT NULL CHECK (method IN ('cash', 'bank_deposit', 'mtn_momo',
+                                                  'orange_money', 'cheque', 'other')),
+  bank_reference  text,
+  received_on     date NOT NULL,
 
-  status            text NOT NULL DEFAULT 'succeeded'
-                      CHECK (status IN ('pending', 'succeeded', 'failed', 'reversed')),
+  -- Append-only, like any ledger. A receipt keyed in wrongly is cancelled by
+  -- a second row carrying the negative amount and pointing at the mistake, so
+  -- a balance stays a plain sum and the error is still visible a year later.
+  reverses_id     uuid UNIQUE REFERENCES fee_receipts(id) ON DELETE RESTRICT,
+  reversal_reason text,
 
-  paid_at           timestamptz NOT NULL DEFAULT now(),
-  recorded_by       text,
-  notes             text,
-  created_at        timestamptz NOT NULL DEFAULT now(),
+  recorded_by     uuid REFERENCES staff(person_id) ON DELETE RESTRICT,
+  notes           text,
+  created_at      timestamptz NOT NULL DEFAULT now(),
 
-  CHECK (amount_charged = amount_received + provider_fee)
+  CONSTRAINT receipt_positive_unless_reversing CHECK (
+    (reverses_id IS NULL     AND amount > 0 AND receipt_no IS NOT NULL) OR
+    (reverses_id IS NOT NULL AND amount < 0 AND reversal_reason IS NOT NULL)
+  )
 );
 
-CREATE INDEX payments_student   ON payments (student_id);
-CREATE INDEX payments_enrolment ON payments (enrolment_id);
-CREATE INDEX payments_paid_at   ON payments (paid_at DESC);
+CREATE INDEX fee_receipts_enrolment ON fee_receipts (enrolment_id);
+CREATE INDEX fee_receipts_received  ON fee_receipts (received_on DESC);
 
--- Which installment a payment settled. A single transfer often clears the
--- remainder of one installment and part of the next, and without this table
--- nobody could say which.
-CREATE TABLE payment_allocations (
-  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  payment_id        uuid NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
-  student_charge_id uuid NOT NULL REFERENCES student_charges(id) ON DELETE RESTRICT,
-  amount            bigint NOT NULL CHECK (amount > 0),
-  created_at        timestamptz NOT NULL DEFAULT now(),
-
-  UNIQUE (payment_id, student_charge_id)
-);
-
-CREATE INDEX payment_allocations_charge ON payment_allocations (student_charge_id);
+-- A receipt is deliberately NOT tied to a particular installment. A student
+-- hands over 75,000 francs; which installment that clears is arithmetic, not
+-- a decision, and `fee_status` settles the oldest unwaived charge first. An
+-- allocations table would make the bursar answer a question the schedule has
+-- already answered. See DESIGN.md, "where I deliberately did not normalise".
 
 
 -- ###########################################################################
@@ -897,11 +925,11 @@ LEFT JOIN LATERAL (
   WHERE sc.enrolment_id = e.id AND NOT sc.waived
 ) charged ON true
 LEFT JOIN LATERAL (
-  SELECT sum(pa.amount) AS total
-  FROM payment_allocations pa
-  JOIN student_charges sc2 ON sc2.id = pa.student_charge_id
-  JOIN payments pm         ON pm.id = pa.payment_id
-  WHERE sc2.enrolment_id = e.id AND pm.status = 'succeeded'
+  -- A reversal carries a negative amount, so the plain sum is already net of
+  -- corrections. No status filter is needed: money that never arrived has no row.
+  SELECT sum(r.amount) AS total
+  FROM fee_receipts r
+  WHERE r.enrolment_id = e.id
 ) paid ON true
 WHERE e.status = 'active';
 
@@ -909,6 +937,17 @@ WHERE e.status = 'active';
 -- build a wa.me link without a second query.
 CREATE VIEW fee_arrears AS
 SELECT * FROM fee_status WHERE status = 'overdue' ORDER BY balance DESC;
+
+-- What came in, by day and by method, for reconciling the cash box against
+-- the bank statement. Reversals net themselves out, being negative.
+CREATE VIEW fee_collections_by_day AS
+SELECT
+  r.received_on,
+  r.method,
+  count(*)      AS receipts,
+  sum(r.amount) AS total
+FROM fee_receipts r
+GROUP BY r.received_on, r.method;
 
 -- The admissions funnel: how many people are at each stage, and where.
 CREATE VIEW admissions_funnel AS
@@ -1012,6 +1051,7 @@ ALTER TABLE persons                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE students                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staff                    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staff_departments        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_roles              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE classes                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE course_offerings         ENABLE ROW LEVEL SECURITY;
@@ -1022,7 +1062,6 @@ ALTER TABLE admission_contacts       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fee_schedules            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fee_schedule_installments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_charges          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payments                 ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_allocations      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fee_receipts             ENABLE ROW LEVEL SECURITY;
 
 COMMIT;

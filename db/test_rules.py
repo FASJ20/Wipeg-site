@@ -177,27 +177,63 @@ allowed("an assistant alongside the lead", "teaching_assignments",
         f"INSERT INTO teaching_assignments (course_offering_id, staff_id, role) "
         f"VALUES ({OFFER}, {MARIE}, 'assistant');")
 
-print("\nMONEY")
+print("\nMONEY - RECORDED, NEVER TAKEN")
 ENROL = f"(SELECT id FROM enrolments WHERE student_id = {MARIE})"
 allowed("charging her the first installment", "student_charges",
         f"INSERT INTO student_charges (enrolment_id, sequence, label, amount_due, due_on) "
         f"VALUES ({ENROL}, 1, 'First installment', 150000, '2026-10-15');")
-allowed("a mobile money payment, student bearing the fee", "payments",
-        f"INSERT INTO payments (student_id, enrolment_id, method, amount_charged, "
-        f"provider_fee, amount_received, provider_reference) "
-        f"VALUES ({MARIE}, {ENROL}, 'mtn_momo', 151500, 1500, 150000, 'MP26100001');")
-rejected("a payment whose three figures do not add up", "payments",
-         f"INSERT INTO payments (student_id, method, amount_charged, provider_fee, "
-         f"amount_received, provider_reference) "
-         f"VALUES ({MARIE}, 'mtn_momo', 151500, 1500, 149000, 'MP26100002');")
-rejected("the same provider reference banked twice", "payments",
-         f"INSERT INTO payments (student_id, method, amount_charged, provider_fee, "
-         f"amount_received, provider_reference) "
-         f"VALUES ({MARIE}, 'mtn_momo', 151500, 1500, 150000, 'MP26100001');")
-allowed("allocating that payment to the installment", "payment_allocations",
-        f"INSERT INTO payment_allocations (payment_id, student_charge_id, amount) "
-        f"VALUES ((SELECT id FROM payments WHERE provider_reference = 'MP26100001'), "
-        f"        (SELECT id FROM student_charges WHERE sequence = 1), 150000);")
+allowed("the bursar entering the receipt she was handed", "fee_receipts",
+        f"INSERT INTO fee_receipts (enrolment_id, receipt_no, amount, method, "
+        f"received_on, recorded_by) "
+        f"VALUES ({ENROL}, 'WIP-2026-00417', 150000, 'mtn_momo', '2026-10-12', {BERT});")
+rejected("the same receipt number keyed in twice", "fee_receipts",
+         f"INSERT INTO fee_receipts (enrolment_id, receipt_no, amount, method, received_on) "
+         f"VALUES ({ENROL}, 'WIP-2026-00417', 90000, 'cash', '2026-10-12');")
+rejected("money received against no receipt at all", "fee_receipts",
+         f"INSERT INTO fee_receipts (enrolment_id, amount, method, received_on) "
+         f"VALUES ({ENROL}, 50000, 'cash', '2026-10-12');")
+rejected("a negative amount that cancels nothing", "fee_receipts",
+         f"INSERT INTO fee_receipts (enrolment_id, receipt_no, amount, method, received_on) "
+         f"VALUES ({ENROL}, 'WIP-2026-00418', -50000, 'cash', '2026-10-12');")
+allowed("cancelling a mis-keyed receipt with a reversing row", "fee_receipts",
+        f"INSERT INTO fee_receipts (enrolment_id, amount, method, received_on, "
+        f"reverses_id, reversal_reason) "
+        f"VALUES ({ENROL}, -150000, 'mtn_momo', '2026-10-13', "
+        f"(SELECT id FROM fee_receipts WHERE receipt_no = 'WIP-2026-00417'), "
+        f"'Entered against the wrong student');")
+rejected("reversing the same receipt a second time", "fee_receipts",
+         f"INSERT INTO fee_receipts (enrolment_id, amount, method, received_on, "
+         f"reverses_id, reversal_reason) "
+         f"VALUES ({ENROL}, -150000, 'cash', '2026-10-14', "
+         f"(SELECT id FROM fee_receipts WHERE receipt_no = 'WIP-2026-00417'), 'again');")
+
+# A reversal is a correction, not a deletion: both rows survive and net to nil.
+net = db.psql(f"SELECT COALESCE(sum(amount), 0) FROM fee_receipts "
+              f"WHERE enrolment_id = {ENROL};")
+rows = db.psql(f"SELECT count(*) FROM fee_receipts WHERE enrolment_id = {ENROL};")
+if re.search(r"\b0\b", net or "") and re.search(r"\b2\b", rows or ""):
+    passed += 1
+    print("  PASS  the reversal nets to nil and both rows survive")
+else:
+    failed += 1
+    print("  FAIL  the reversal did not net to nil")
+
+print("\nWHO MAY DO WHAT")
+allowed("a third person, holding no post at WIPEG", "persons",
+        "INSERT INTO persons (surname, given_names, name_on_id, phone) "
+        "VALUES ('ACHU', 'Vivian', 'ACHU Vivian', '+237699001122');")
+ACHU = "(SELECT id FROM persons WHERE surname = 'ACHU')"
+allowed("making the lecturer bursar as well", "staff_roles",
+        f"INSERT INTO staff_roles (staff_id, role) VALUES ({BERT}, 'bursar');")
+rejected("granting a role nobody defined", "staff_roles",
+         f"INSERT INTO staff_roles (staff_id, role) VALUES ({BERT}, 'superuser');")
+rejected("granting the same role twice", "staff_roles",
+         f"INSERT INTO staff_roles (staff_id, role) VALUES ({BERT}, 'bursar');")
+rejected("a role for someone with no staff record", "staff_roles",
+         f"INSERT INTO staff_roles (staff_id, role) VALUES ({ACHU}, 'registrar');")
+rejected("a role revoked before it was granted", "staff_roles",
+         f"INSERT INTO staff_roles (staff_id, role, granted_on, revoked_on) "
+         f"VALUES ({MARIE}, 'registrar', '2026-10-01', '2026-09-01');")
 
 print("\nADMISSIONS FUNNEL")
 rejected("accepting a candidate with no person record", "admissions",
@@ -227,7 +263,7 @@ rejected("a second head of the same department", "staff_departments",
 print("\nWHAT THE VIEWS SHOW")
 for view in ("current_students", "fee_status", "teaching_load",
              "admissions_funnel", "students_missing_required_data",
-             "fee_schedules_unbalanced", "fee_arrears",
+             "fee_schedules_unbalanced", "fee_arrears", "fee_collections_by_day",
              "online_students_for_exams", "level_one_specialisation_interest"):
     out = db.psql(f"SELECT count(*) FROM {view};")
     if re.search(r"\d+", out or ""):

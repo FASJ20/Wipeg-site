@@ -3,7 +3,7 @@
 --
 --  Run:  psql "$DATABASE_URL" -f db/rollback.sql
 --
---  This DESTROYS every student, payment and admission record. It exists so the
+--  This DESTROYS every student, receipt and admission record. It exists so the
 --  baseline can be rebuilt while nothing real is in the database yet, and so
 --  the test harness can start from clean. Once WIPEG has live data, changes
 --  are made by numbered migrations in db/migrations/, never by running this.
@@ -15,6 +15,7 @@ DROP VIEW IF EXISTS fee_schedules_unbalanced;
 DROP VIEW IF EXISTS students_missing_required_data;
 DROP VIEW IF EXISTS level_one_specialisation_interest;
 DROP VIEW IF EXISTS admissions_funnel;
+DROP VIEW IF EXISTS fee_collections_by_day;
 DROP VIEW IF EXISTS fee_arrears;
 DROP VIEW IF EXISTS fee_status;
 DROP VIEW IF EXISTS teaching_load;
@@ -23,8 +24,7 @@ DROP VIEW IF EXISTS current_students;
 
 -- Reverse order of creation: money, then delivery, then people, then calendar,
 -- then catalogue. CASCADE is deliberate — it also removes the triggers.
-DROP TABLE IF EXISTS payment_allocations       CASCADE;
-DROP TABLE IF EXISTS payments                  CASCADE;
+DROP TABLE IF EXISTS fee_receipts              CASCADE;
 DROP TABLE IF EXISTS student_charges           CASCADE;
 DROP TABLE IF EXISTS fee_schedule_installments CASCADE;
 DROP TABLE IF EXISTS fee_schedules             CASCADE;
@@ -37,6 +37,7 @@ DROP TABLE IF EXISTS course_offerings          CASCADE;
 DROP TABLE IF EXISTS classes                   CASCADE;
 
 DROP TABLE IF EXISTS documents                 CASCADE;
+DROP TABLE IF EXISTS staff_roles               CASCADE;
 DROP TABLE IF EXISTS staff_departments         CASCADE;
 DROP TABLE IF EXISTS staff                     CASCADE;
 DROP TABLE IF EXISTS students                  CASCADE;

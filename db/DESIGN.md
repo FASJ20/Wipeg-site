@@ -1,16 +1,24 @@
 # WIPEG academic records — database design
 
 **Status:** designed, written and tested. **Not deployed.** Nothing exists yet
-but three files: `db/schema.sql` (25 tables, 9 views), `db/rollback.sql`, and
+but three files: `db/schema.sql` (25 tables, 10 views), `db/rollback.sql`, and
 `db/test_rules.py`, which starts a real throwaway PostgreSQL, applies the
 schema and tries to break every rule the design claims to enforce. It currently
-passes 45 of 45.
+passes 55 of 55.
 
 **Scope:** students, lecturers, departments, courses, awards, fees, admissions,
-campuses, levels, classes and academic years. Payment *processing* (the MTN and
-Orange integrations) is not here — only the records those integrations will
-write into. Google Workspace provisioning is not here either, but the two
-columns it will need are, and they are marked.
+campuses, levels, classes and academic years.
+
+**No money moves through this system.** Fees are paid at the bursary, into the
+bank, or by Mobile Money to WIPEG's own number; the bursar then enters what
+arrived. So there is no gateway, no webhook, no card data and no stored account
+number — but every franc owed and every franc received is still recorded, which
+is what makes `fee_status` and the arrears list work. Google Workspace
+provisioning is not here either, but the two columns it will need are, and they
+are marked.
+
+The HTTP layer that sits on top of this — every endpoint, and who may call it —
+is in **db/API.md**.
 
 ---
 
@@ -88,7 +96,8 @@ Five layers. A table may only depend on the layers above it.
 2  CALENDAR    academic_years, terms
                — when. Edited once a year, by hand.
 
-3  PEOPLE      persons, students, staff, staff_departments, documents
+3  PEOPLE      persons, students, staff, staff_departments, staff_roles,
+               documents
                — one row per human, for life.
 
 4  DELIVERY    classes, course_offerings, teaching_assignments, enrolments,
@@ -96,7 +105,7 @@ Five layers. A table may only depend on the layers above it.
                — who is taught what. Changes constantly.
 
 5  MONEY       fee_schedules, fee_schedule_installments, student_charges,
-               payments, payment_allocations
+               fee_receipts
                — append-only. Never edited after the fact.
 ```
 
@@ -150,6 +159,17 @@ administration, so it is stored and never generated. **There is still no
 certificate is filed exactly like a student's birth certificate — one table,
 one storage convention, one verification workflow.
 
+`staff_roles` is what the API checks before it lets anybody do anything, and it
+is kept apart from `staff.job_title` on purpose. A job title is free text that
+varies by campus and gets rewritten when somebody is promoted; permission has
+to be an exact, closed list — `registrar`, `bursar`, `admissions`,
+`administrator` — that code can compare against. Two things that are *already*
+facts are not repeated as roles: teaching a class comes from
+`teaching_assignments`, and heading a department from
+`staff_departments.is_head`. Grants are revoked by date rather than deleted,
+because "who could approve a waiver last March" is a question that gets asked
+after the fact.
+
 ### 4.4 Courses: three tables, not one
 
 This is the part most school databases get wrong, so it is worth being explicit.
@@ -187,10 +207,10 @@ with where they actually sit.
 
 You listed "Fees status" as data to store. It is the one item I pushed back on.
 
-Storing `fee_status = 'paid'` means that the moment a payment arrives, a
+Storing `fee_status = 'paid'` means that the moment money arrives, a
 deadline passes, or a waiver is granted, the column is a lie until somebody
-remembers to update it. Worse, when it disagrees with the payment records, no
-one can tell which is right.
+remembers to update it. Worse, when it disagrees with the receipts, no one can
+tell which is right.
 
 So the money layer stores only **facts that happened**:
 
@@ -199,8 +219,7 @@ So the money layer stores only **facts that happened**:
 | `fee_schedules` | what a group is charged this year |
 | `fee_schedule_installments` | the three installments and their due dates |
 | `student_charges` | what *this* student owes, **copied at enrolment** |
-| `payments` | money that actually moved |
-| `payment_allocations` | which installment each payment settled |
+| `fee_receipts` | money that actually arrived, as entered by the bursar |
 
 and `fee_status` computes balance, next due date and a label
 (`paid` / `on_track` / `due_soon` / `overdue`) on every read. `fee_arrears`
@@ -214,18 +233,25 @@ installments are *copied* from the schedule into `student_charges`. If fees rise
 next August, last year's students keep the figures they agreed to. A live lookup
 would silently rewrite history.
 
-**Payments record three figures, not one.** With Mobile Money, what leaves the
-student's wallet, what MTN keeps, and what reaches WIPEG are three different
-numbers. Since you decided the student bears the fee, a `CHECK` enforces
-`amount_charged = amount_received + provider_fee`, and only `amount_received`
-reduces a balance. Conflating these is how school books stop balancing.
+**A receipt records one amount, because only one amount exists.** An earlier
+draft of this schema carried three figures — charged, provider fee, received —
+for Mobile Money. That was built for a system that *takes* payments. This one
+does not: by the time the bursar opens the form, the money is already in the
+cash box or the bank, and the only figure anyone can verify is what arrived. So
+one `amount` column, with `method` kept purely so the cash box and the bank
+statement can be reconciled against it.
 
-**`provider_reference` is unique.** That one word is what will make the payment
-webhook safe to retry — the same notification arriving twice cannot be banked
-twice. It matters more than it looks.
+**`receipt_no` is unique.** It is the number on the paper receipt or the bank
+slip, and that one word of SQL is the whole defence against the same payment
+being keyed in twice by two people on two days. The API turns the resulting
+constraint violation into a 409 that names the receipt already on file.
 
-Payments are also **append-only**. A mistake is corrected by a reversing row,
-never by editing the original. There is no `updated_at` on that table on purpose.
+**Receipts are append-only.** One entered wrongly is cancelled by a second row
+carrying the **negative** amount and pointing at the mistake through
+`reverses_id`, which is itself unique so nothing can be reversed twice. Two
+things fall out of that, both deliberate: a balance is a plain `sum(amount)`
+with no status filter to forget, and the error is still visible a year later
+when somebody asks why the figures moved.
 
 ### 5.2 Leads and applications are one table
 
@@ -266,7 +292,7 @@ already written, so day-to-day queries are still one-liners.
 
 ## 6. Where I deliberately did *not* normalise
 
-Two places, both on purpose. The design skills' checklist asks that any
+Three places, all on purpose. The design skills' checklist asks that any
 denormalisation be justified, so:
 
 **Guardian details stay on `students`.** The textbook move is a `guardians`
@@ -276,6 +302,15 @@ said explicitly that every student must have one — especially minors. A juncti
 table cannot express "at least one" in SQL without a trigger, so normalising
 here would have traded a **guarantee you asked for** for a convenience nobody
 asked for. If sibling-linking ever matters, this promotes cleanly.
+
+**Receipts are not allocated to individual installments.** The textbook move is
+a `payment_allocations` table recording which installment each receipt cleared.
+I dropped it. A student hands over 75,000 francs; *which* installment that
+clears is arithmetic, not a decision, and `fee_status` settles the oldest
+unwaived charge first. The table would have made the bursar answer a question
+the schedule has already answered — and given two people a way to answer it
+differently. The cost is honest: WIPEG cannot record "this one was for the
+second installment only, leave the first outstanding". Nobody has asked to.
 
 **`course_offerings.academic_year_id` is redundant.** It can be derived from the
 class. It is stored anyway so the two composite foreign keys can prove that the
@@ -301,8 +336,8 @@ places for exactly this reason, and the test suite checks all four.
 meaningless alone.** Nothing that constitutes an academic record can be removed
 by a cascade — you cannot delete a department that still has classes, or a
 student who has enrolments. `CASCADE` appears in five places only:
-`students`/`staff` off `persons`, `fee_schedule_installments` off their
-schedule, `payment_allocations` off their payment, `teaching_assignments` off
+`students`/`staff` off `persons`, `staff_roles` off `staff`,
+`fee_schedule_installments` off their schedule, `teaching_assignments` off
 their offering, and `admission_contacts` off their admission.
 
 **People are never deleted.** `students.status` moves to `graduated`,
@@ -333,7 +368,8 @@ Being honest about the gaps matters more than claiming completeness.
 | Installments must sum to the tuition total | SQL cannot check a sum across rows declaratively | `fee_schedules_unbalanced` view — should always be empty |
 | A student must have a date of birth and a photo | Those columns live on `persons`, shared with staff; `NOT NULL` would bind lecturers too | `students_missing_required_data` view |
 | An admission row should freeze once accepted | Would need a trigger | Convention, plus `decided_at` / `decided_by` |
-| Allocations must not exceed the payment | Cross-row sum again | Application-side check at allocation time |
+| A reversal must cancel exactly what the original receipt banked | Comparing two rows' amounts needs a trigger | The reverse endpoint copies the amount from the row it cancels, and never takes one from the caller |
+| A role may only be granted by someone entitled to grant it | The database has no notion of who is calling | Enforced at the single endpoint that writes `staff_roles`; `granted_by` records who did it |
 
 Each of these could become a trigger. I have not written them, because a trigger
 is code that runs on every write and I would rather add them once the real

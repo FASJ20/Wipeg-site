@@ -12,7 +12,8 @@
 --    1. CATALOGUE   what WIPEG offers      — edited once a year, by hand
 --    2. CALENDAR    when it is offered     — edited once a year, by hand
 --    3. PEOPLE      who is involved        — one row per human, for life
---    4. DELIVERY    who is taught what     — changes constantly
+--    4. DELIVERY    who is taught what     — changes constantly, and the
+--                   admissions funnel that feeds it, including booked calls
 --    5. MONEY       what is owed and received — append-only, never edited
 --
 --  A table may only depend on the layers above it. Nothing in the catalogue
@@ -340,24 +341,25 @@ CREATE INDEX staff_departments_department ON staff_departments (department_id);
 CREATE UNIQUE INDEX staff_departments_one_head
   ON staff_departments (department_id) WHERE is_head;
 
--- What a member of staff may DO in the system, which is not the same thing as
--- what is printed on their card. `staff.job_title` is free text and varies by
--- campus; permission has to be an exact, closed list the API can compare
--- against, so it lives here. Teaching a class comes from
--- `teaching_assignments` and heading a department from
--- `staff_departments.is_head` — both are already facts, so neither is
--- repeated as a role here. See db/API.md for what each role can reach.
+-- WIPEG has three kinds of user, and this table holds the only one of them
+-- that can be handed out:
+--
+--   student   a row in `students`
+--   lecturer  a row in `staff`  — that is all it takes; no grant needed
+--   admin     a row in `staff`  AND a live 'admin' grant here
+--
+-- Being a lecturer is not granted, because it is simply what a staff row
+-- means. Admin is granted, and only an existing admin can do it.
+--
+-- Kept as a table rather than a boolean on `staff` for one reason: a grant
+-- carries the date and the person who made it, and is revoked by date rather
+-- than deleted. "Who could change the fees last March" is a question that
+-- gets asked after the fact. See db/API.md for what each role can reach.
 CREATE TABLE staff_roles (
   staff_id      uuid NOT NULL REFERENCES staff(person_id) ON DELETE CASCADE,
-  role          text NOT NULL CHECK (role IN ('registrar',       -- academic records
-                                              'bursar',          -- fees
-                                              'admissions',      -- the funnel
-                                              'administrator')), -- all of it, grants roles
+  role          text NOT NULL CHECK (role IN ('admin')),
   granted_on    date NOT NULL DEFAULT CURRENT_DATE,
   granted_by    uuid REFERENCES staff(person_id) ON DELETE RESTRICT,
-
-  -- Revoked, not deleted: who could approve a fee waiver last March is a
-  -- question that gets asked after the fact.
   revoked_on    date,
   created_at    timestamptz NOT NULL DEFAULT now(),
 
@@ -365,8 +367,8 @@ CREATE TABLE staff_roles (
   CHECK (revoked_on IS NULL OR revoked_on >= granted_on)
 );
 
--- The one index authorisation needs: every request resolves a signed-in
--- person to their live roles.
+-- The one index authorisation needs: every request turns a signed-in person
+-- into "is this an admin?".
 CREATE INDEX staff_roles_live ON staff_roles (staff_id) WHERE revoked_on IS NULL;
 
 -- Certificates, photos and IDs, for students and staff alike — a lecturer's
@@ -655,6 +657,67 @@ CREATE TABLE admission_contacts (
 );
 
 CREATE INDEX admission_contacts_admission ON admission_contacts (admission_id, contacted_at DESC);
+
+
+-- A booked call with the admissions office, made from the website. The visitor
+-- picks a free slot, the booking is written to Google Calendar, and shortly
+-- before it starts a WhatsApp message reminds the member of staff who is
+-- taking it.
+--
+-- It hangs off `admissions`, not off nothing, because a stranger booking a
+-- call IS an enquiry — the same person at the same moment. One funnel, as
+-- with leads and applications. The booking form therefore collects what an
+-- admission row needs: campus, department and intended level.
+CREATE TABLE appointments (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admission_id     uuid NOT NULL REFERENCES admissions(id) ON DELETE CASCADE,
+
+  -- Who takes the call. Null means nobody has picked it up yet, which is
+  -- exactly the list the admissions office needs to see each morning.
+  staff_id         uuid REFERENCES staff(person_id) ON DELETE RESTRICT,
+
+  starts_at        timestamptz NOT NULL,
+  ends_at          timestamptz NOT NULL,
+  channel          text NOT NULL DEFAULT 'phone'
+                     CHECK (channel IN ('phone', 'whatsapp', 'video', 'in_person')),
+
+  status           text NOT NULL DEFAULT 'booked'
+                     CHECK (status IN ('booked', 'confirmed', 'held',
+                                       'no_show', 'cancelled')),
+
+  -- The event this created in Google Calendar. Nullable and unique, so
+  -- writing to Google can be a retrying background job that cannot double up.
+  google_event_id  text UNIQUE,
+  google_calendar_id text,
+
+  -- Set the moment the WhatsApp reminder goes out, so the job can run every
+  -- few minutes without ever sending twice.
+  reminder_sent_at timestamptz,
+
+  cancelled_reason text,
+  notes            text,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+
+  CHECK (ends_at > starts_at),
+  CHECK (status <> 'cancelled' OR cancelled_reason IS NOT NULL)
+);
+
+CREATE TRIGGER appointments_touch BEFORE UPDATE ON appointments
+  FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
+CREATE INDEX appointments_admission ON appointments (admission_id);
+CREATE INDEX appointments_upcoming  ON appointments (starts_at)
+  WHERE status IN ('booked', 'confirmed');
+
+-- One member of staff cannot be booked twice for the same moment. Slots are
+-- generated on a fixed grid (every 30 minutes inside office hours), so two
+-- bookings either start at the same instant or do not overlap at all, and
+-- equality is enough. True overlap of unequal times would need an EXCLUDE
+-- constraint and the btree_gist extension; the grid makes that unnecessary.
+CREATE UNIQUE INDEX appointments_no_double_booking
+  ON appointments (staff_id, starts_at)
+  WHERE status <> 'cancelled';
 
 
 -- ###########################################################################
@@ -969,6 +1032,58 @@ LEFT JOIN LATERAL (
 ) ac ON true
 GROUP BY ay.label, c.name, d.name, a.stage;
 
+-- Calls starting soon that nobody has been reminded about. The WhatsApp job
+-- reads this, sends one message per row, and stamps `reminder_sent_at`.
+-- Everything the message needs is here, so the job makes one query.
+CREATE VIEW appointments_needing_reminder AS
+SELECT
+  ap.id            AS appointment_id,
+  ap.starts_at,
+  ap.channel,
+  cmp.name         AS campus,
+  d.name           AS department,
+  sp.surname       AS staff_surname,
+  sp.given_names   AS staff_given_names,
+  sp.phone         AS staff_phone,
+  a.surname        AS enquirer_surname,
+  a.given_names    AS enquirer_given_names,
+  a.phone          AS enquirer_phone
+FROM appointments ap
+JOIN admissions   a   ON a.id = ap.admission_id
+JOIN campuses     cmp ON cmp.id = a.campus_id
+JOIN departments  d   ON d.id = a.department_id
+LEFT JOIN persons sp  ON sp.id = ap.staff_id
+WHERE ap.status IN ('booked', 'confirmed')
+  AND ap.reminder_sent_at IS NULL
+  AND ap.starts_at > now()
+  AND ap.starts_at < now() + interval '2 hours';
+
+-- Every call booked from today onwards, for the admissions office's day view.
+-- A call with no `staff_surname` is one nobody has picked up yet.
+CREATE VIEW appointment_diary AS
+SELECT
+  ap.id            AS appointment_id,
+  ap.starts_at,
+  ap.ends_at,
+  ap.channel,
+  ap.status,
+  cmp.name         AS campus,
+  d.name           AS department,
+  a.level_applied,
+  a.stage          AS admission_stage,
+  sp.surname       AS staff_surname,
+  a.surname        AS enquirer_surname,
+  a.given_names    AS enquirer_given_names,
+  a.phone          AS enquirer_phone,
+  ap.google_event_id IS NOT NULL AS in_google_calendar,
+  ap.reminder_sent_at IS NOT NULL AS reminded
+FROM appointments ap
+JOIN admissions   a   ON a.id = ap.admission_id
+JOIN campuses     cmp ON cmp.id = a.campus_id
+JOIN departments  d   ON d.id = a.department_id
+LEFT JOIN persons sp  ON sp.id = ap.staff_id
+WHERE ap.starts_at >= CURRENT_DATE;
+
 -- Level 1 candidates and the specialisation they said they wanted, so next
 -- year's Level 2 classes can be sized before they have to be created.
 CREATE VIEW level_one_specialisation_interest AS
@@ -1059,6 +1174,7 @@ ALTER TABLE teaching_assignments     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enrolments               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admissions               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admission_contacts       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fee_schedules            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fee_schedule_installments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_charges          ENABLE ROW LEVEL SECURITY;

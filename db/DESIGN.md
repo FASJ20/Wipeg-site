@@ -1,10 +1,10 @@
 # WIPEG academic records — database design
 
 **Status:** designed, written and tested. **Not deployed.** Nothing exists yet
-but three files: `db/schema.sql` (25 tables, 10 views), `db/rollback.sql`, and
+but three files: `db/schema.sql` (26 tables, 12 views), `db/rollback.sql`, and
 `db/test_rules.py`, which starts a real throwaway PostgreSQL, applies the
 schema and tries to break every rule the design claims to enforce. It currently
-passes 55 of 55.
+passes 66 of 66.
 
 **Scope:** students, lecturers, departments, courses, awards, fees, admissions,
 campuses, levels, classes and academic years.
@@ -17,8 +17,9 @@ is what makes `fee_status` and the arrears list work. Google Workspace
 provisioning is not here either, but the two columns it will need are, and they
 are marked.
 
-The HTTP layer that sits on top of this — every endpoint, and who may call it —
-is in **db/API.md**.
+The HTTP layer that sits on top of this — every endpoint, and who may call it,
+written to be readable by someone who is not a developer — is in **db/API.md**.
+The build itself is broken into twelve steps in **prompt.md**.
 
 ---
 
@@ -101,8 +102,9 @@ Five layers. A table may only depend on the layers above it.
                — one row per human, for life.
 
 4  DELIVERY    classes, course_offerings, teaching_assignments, enrolments,
-               admissions, admission_contacts
-               — who is taught what. Changes constantly.
+               admissions, admission_contacts, appointments
+               — who is taught what, and the funnel that feeds it.
+               Changes constantly.
 
 5  MONEY       fee_schedules, fee_schedule_installments, student_charges,
                fee_receipts
@@ -159,16 +161,32 @@ administration, so it is stored and never generated. **There is still no
 certificate is filed exactly like a student's birth certificate — one table,
 one storage convention, one verification workflow.
 
-`staff_roles` is what the API checks before it lets anybody do anything, and it
-is kept apart from `staff.job_title` on purpose. A job title is free text that
-varies by campus and gets rewritten when somebody is promoted; permission has
-to be an exact, closed list — `registrar`, `bursar`, `admissions`,
-`administrator` — that code can compare against. Two things that are *already*
-facts are not repeated as roles: teaching a class comes from
-`teaching_assignments`, and heading a department from
-`staff_departments.is_head`. Grants are revoked by date rather than deleted,
-because "who could approve a waiver last March" is a question that gets asked
+`staff_roles` is what the API checks before it lets anybody do anything. WIPEG
+has **three kinds of user**, and only one of them is granted:
+
+| Role | How the system knows | Reach |
+|---|---|---|
+| **Student** | a row in `students` | their own record only |
+| **Lecturer** | a row in `staff` | the offerings they are assigned to teach |
+| **Admin** | a row in `staff` **and** a live `admin` grant | everything |
+
+Being a lecturer is not a grant, because it is simply what a staff row means.
+`admin` is the only value the `CHECK` allows, and only an existing admin can
+hand it out.
+
+It is kept as a table rather than a boolean on `staff` for one reason: a grant
+carries the date and the person who made it, and is revoked by date rather than
+deleted. "Who could change the fees last March" is a question that gets asked
 after the fact.
+
+An earlier draft split the office four ways — registrar, bursar, admissions,
+administrator — so that whoever records money could not also change academic
+records. One Admin role collapses that: anybody who can enter a receipt can
+also change a matricule and a fee schedule. For an institute this size that is
+a fair trade, since nobody is ever locked out of a job on a Saturday — but it
+makes the audit log the only control left, which is why `db/API.md` lists it as
+a gap to close before go-live rather than after. Splitting the role out again
+is one line in this `CHECK` and one word per route file.
 
 ### 4.4 Courses: three tables, not one
 
@@ -253,11 +271,25 @@ things fall out of that, both deliberate: a balance is a plain `sum(amount)`
 with no status filter to forget, and the error is still visible a year later
 when somebody asks why the figures moved.
 
-### 5.2 Leads and applications are one table
+### 5.2 Leads, applications and booked calls are one table
 
 A curious visitor who messages on WhatsApp, an applicant, and an accepted
 candidate are the same person pursuing the same thing at three moments. Two
 tables would mean copying ten fields across and letting them drift.
+
+Booking a call from the website is the fourth such moment, so `appointments`
+hangs off `admissions` rather than standing alone. A stranger who books a call
+*is* an enquiry — the same person, the same instant — and the booking form
+collects exactly what an admission row needs: campus, department and intended
+level. That is also what closes the gap in the existing enquiry form, which
+collects none of the three. One funnel, four ways in.
+
+Two details inside `appointments` worth naming. `staff_id` is nullable, and a
+null is not a gap in the data — it is the list the admissions office needs
+each morning, the calls nobody has claimed. And `reminder_sent_at` is stamped
+the moment the WhatsApp reminder goes out, which is the whole reason the
+reminder job can run every five minutes forever without messaging anybody
+twice.
 
 So `admissions` is one row that advances through
 `lead → applied → reviewing → offered → accepted → enrolled`, with
@@ -335,10 +367,11 @@ places for exactly this reason, and the test suite checks all four.
 **Deletion policy: `RESTRICT` everywhere, `CASCADE` only where the child is
 meaningless alone.** Nothing that constitutes an academic record can be removed
 by a cascade — you cannot delete a department that still has classes, or a
-student who has enrolments. `CASCADE` appears in five places only:
+student who has enrolments. `CASCADE` appears in six places only:
 `students`/`staff` off `persons`, `staff_roles` off `staff`,
 `fee_schedule_installments` off their schedule, `teaching_assignments` off
-their offering, and `admission_contacts` off their admission.
+their offering, and both `admission_contacts` and `appointments` off their
+admission.
 
 **People are never deleted.** `students.status` moves to `graduated`,
 `withdrawn` or `deceased`. A 2027 leaver still needs a transcript in 2032.
@@ -351,7 +384,7 @@ currency does not have. `currency` is a column anyway, checked to `'XAF'`, so
 the day WIPEG bills anything else the constraint fails loudly instead of
 silently mixing units.
 
-**Row-level security is on for all 25 tables with no policies**, which in
+**Row-level security is on for all 26 tables with no policies**, which in
 Supabase means the anon and publishable keys can read nothing at all. The
 application reaches the database only server-side with the service role, which
 bypasses RLS. If a key ever leaks into browser JavaScript, it opens nothing.
@@ -370,6 +403,7 @@ Being honest about the gaps matters more than claiming completeness.
 | An admission row should freeze once accepted | Would need a trigger | Convention, plus `decided_at` / `decided_by` |
 | A reversal must cancel exactly what the original receipt banked | Comparing two rows' amounts needs a trigger | The reverse endpoint copies the amount from the row it cancels, and never takes one from the caller |
 | A role may only be granted by someone entitled to grant it | The database has no notion of who is calling | Enforced at the single endpoint that writes `staff_roles`; `granted_by` records who did it |
+| Two bookings for one member of staff must not overlap | True overlap needs an `EXCLUDE` constraint and the `btree_gist` extension, which the test Postgres does not carry | Slots come off a fixed 30-minute grid, so overlapping bookings always share a start time — caught by a unique index on `(staff_id, starts_at)` |
 
 Each of these could become a trigger. I have not written them, because a trigger
 is code that runs on every write and I would rather add them once the real
@@ -422,6 +456,12 @@ Nothing below blocks deployment; all of it blocks *seeding real data*.
 6. **Staff list** — names, phones, qualifications, departments.
 7. Confirmation that **Levels 1–2 = HND, 3 = Bachelor, 4–5 = Master** holds for
    every department.
+8. **Office hours for booked calls** — which days, which hours, and how long a
+   call should be. The defaults in `backend/.env.example` are a guess.
+9. **Which staff phone the WhatsApp reminders go to**, and who takes calls by
+   default when nobody has claimed one.
+10. **Who should be an admin.** With three roles, admin is everything; the
+    first one has to be created by hand when the database is seeded.
 
 ---
 

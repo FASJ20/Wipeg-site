@@ -218,22 +218,22 @@ else:
     failed += 1
     print("  FAIL  the reversal did not net to nil")
 
-print("\nWHO MAY DO WHAT")
+print("\nTHREE KINDS OF USER")
 allowed("a third person, holding no post at WIPEG", "persons",
         "INSERT INTO persons (surname, given_names, name_on_id, phone) "
         "VALUES ('ACHU', 'Vivian', 'ACHU Vivian', '+237699001122');")
 ACHU = "(SELECT id FROM persons WHERE surname = 'ACHU')"
-allowed("making the lecturer bursar as well", "staff_roles",
-        f"INSERT INTO staff_roles (staff_id, role) VALUES ({BERT}, 'bursar');")
-rejected("granting a role nobody defined", "staff_roles",
-         f"INSERT INTO staff_roles (staff_id, role) VALUES ({BERT}, 'superuser');")
-rejected("granting the same role twice", "staff_roles",
+allowed("making the lecturer an admin as well", "staff_roles",
+        f"INSERT INTO staff_roles (staff_id, role) VALUES ({BERT}, 'admin');")
+rejected("inventing a role the system does not have", "staff_roles",
          f"INSERT INTO staff_roles (staff_id, role) VALUES ({BERT}, 'bursar');")
-rejected("a role for someone with no staff record", "staff_roles",
-         f"INSERT INTO staff_roles (staff_id, role) VALUES ({ACHU}, 'registrar');")
-rejected("a role revoked before it was granted", "staff_roles",
+rejected("granting admin to the same person twice", "staff_roles",
+         f"INSERT INTO staff_roles (staff_id, role) VALUES ({BERT}, 'admin');")
+rejected("admin for someone with no staff record", "staff_roles",
+         f"INSERT INTO staff_roles (staff_id, role) VALUES ({ACHU}, 'admin');")
+rejected("a grant revoked before it was made", "staff_roles",
          f"INSERT INTO staff_roles (staff_id, role, granted_on, revoked_on) "
-         f"VALUES ({MARIE}, 'registrar', '2026-10-01', '2026-09-01');")
+         f"VALUES ({MARIE}, 'admin', '2026-10-01', '2026-09-01');")
 
 print("\nADMISSIONS FUNNEL")
 rejected("accepting a candidate with no person record", "admissions",
@@ -248,6 +248,36 @@ rejected("applying to level 2 without naming a specialisation", "admissions",
          f"INSERT INTO admissions (campus_id, department_id, level_applied, "
          f"academic_year_id, surname, given_names, phone) "
          f"VALUES ({GRA}, {CEN}, 2, {YR1}, 'BIH', 'Clarisse', '+237656894203');")
+
+print("\nBOOKED CALLS FROM THE WEBSITE")
+LEAD = "(SELECT id FROM admissions WHERE surname = 'MBOM')"
+allowed("a visitor booking a call with a named member of staff", "appointments",
+        f"INSERT INTO appointments (admission_id, staff_id, starts_at, ends_at) "
+        f"VALUES ({LEAD}, {BERT}, '2026-11-26 09:00+01', '2026-11-26 09:30+01');")
+rejected("the same member of staff booked twice for one slot", "appointments",
+         f"INSERT INTO appointments (admission_id, staff_id, starts_at, ends_at) "
+         f"VALUES ({LEAD}, {BERT}, '2026-11-26 09:00+01', '2026-11-26 09:30+01');")
+allowed("the same member of staff in the next slot", "appointments",
+        f"INSERT INTO appointments (admission_id, staff_id, starts_at, ends_at) "
+        f"VALUES ({LEAD}, {BERT}, '2026-11-26 09:30+01', '2026-11-26 10:00+01');")
+rejected("a call that ends before it starts", "appointments",
+         f"INSERT INTO appointments (admission_id, starts_at, ends_at) "
+         f"VALUES ({LEAD}, '2026-11-26 11:00+01', '2026-11-26 10:30+01');")
+rejected("a call booked against no enquiry at all", "appointments",
+         "INSERT INTO appointments (admission_id, starts_at, ends_at) "
+         "VALUES (NULL, '2026-11-26 11:00+01', '2026-11-26 11:30+01');")
+allowed("a call nobody has picked up yet", "appointments",
+        f"INSERT INTO appointments (admission_id, starts_at, ends_at) "
+        f"VALUES ({LEAD}, '2026-11-26 09:00+01', '2026-11-26 09:30+01');")
+rejected("cancelling without saying why", "appointments",
+         f"INSERT INTO appointments (admission_id, starts_at, ends_at, status) "
+         f"VALUES ({LEAD}, '2026-11-27 09:00+01', '2026-11-27 09:30+01', 'cancelled');")
+allowed("the same google event id reused", "appointments",
+        f"INSERT INTO appointments (admission_id, starts_at, ends_at, google_event_id) "
+        f"VALUES ({LEAD}, '2026-11-27 09:00+01', '2026-11-27 09:30+01', 'gcal_abc123');")
+rejected("that google event id written a second time", "appointments",
+         f"INSERT INTO appointments (admission_id, starts_at, ends_at, google_event_id) "
+         f"VALUES ({LEAD}, '2026-11-27 10:00+01', '2026-11-27 10:30+01', 'gcal_abc123');")
 
 print("\nSINGLETONS")
 rejected("a second main campus", "campuses",
@@ -264,6 +294,7 @@ print("\nWHAT THE VIEWS SHOW")
 for view in ("current_students", "fee_status", "teaching_load",
              "admissions_funnel", "students_missing_required_data",
              "fee_schedules_unbalanced", "fee_arrears", "fee_collections_by_day",
+             "appointments_needing_reminder", "appointment_diary",
              "online_students_for_exams", "level_one_specialisation_interest"):
     out = db.psql(f"SELECT count(*) FROM {view};")
     if re.search(r"\d+", out or ""):

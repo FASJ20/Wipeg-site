@@ -14,6 +14,8 @@ BEGIN;
 DROP VIEW IF EXISTS fee_schedules_unbalanced;
 DROP VIEW IF EXISTS students_missing_required_data;
 DROP VIEW IF EXISTS level_one_specialisation_interest;
+DROP VIEW IF EXISTS appointment_diary;
+DROP VIEW IF EXISTS appointments_needing_reminder;
 DROP VIEW IF EXISTS admissions_funnel;
 DROP VIEW IF EXISTS fee_collections_by_day;
 DROP VIEW IF EXISTS fee_arrears;
@@ -29,6 +31,7 @@ DROP TABLE IF EXISTS student_charges           CASCADE;
 DROP TABLE IF EXISTS fee_schedule_installments CASCADE;
 DROP TABLE IF EXISTS fee_schedules             CASCADE;
 
+DROP TABLE IF EXISTS appointments               CASCADE;
 DROP TABLE IF EXISTS admission_contacts        CASCADE;
 DROP TABLE IF EXISTS admissions                CASCADE;
 DROP TABLE IF EXISTS enrolments                CASCADE;

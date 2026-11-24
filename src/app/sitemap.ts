@@ -2,8 +2,9 @@ import type { MetadataRoute } from "next";
 
 import { departments } from "@/data/site";
 
-/** Update this once the real domain is live (see REPLACE-ME.md). */
-export const SITE_URL = "https://wipeg.cm";
+/** The real domain, registered at Hostinger. Mail lives on Google Workspace;
+    see docs/google-workspace.md. */
+export const SITE_URL = "https://wipeg.online";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

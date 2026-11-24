@@ -187,5 +187,10 @@ misrepresent them. Add a real photo only together with that person's consent.
 
 ## 13. Domain — `src/app/layout.tsx`
 
-`metadataBase` is set to `https://wipeg.cm`. Change it to the real domain so
-Open Graph and canonical URLs resolve correctly.
+**Done.** The real domain is `wipeg.online`, registered at Hostinger and now
+set in both `src/app/layout.tsx` (`metadataBase`) and `src/app/sitemap.ts`
+(`SITE_URL`).
+
+Still open: `school.email` in `src/data/site.ts` is a Gmail address. Swap it to
+an `@wipeg.online` mailbox once Google Workspace is live — see
+`docs/google-workspace.md`.

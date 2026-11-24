@@ -31,7 +31,10 @@ export const school = {
   phones: ["+237 677 487 127", "+237 675 413 814", "+237 690 779 552"],
   /* ✅ POSTER — the institute's real address */
   email: "wipeggaroua@gmail.com",
-  website: "WipegGaroua.com",
+  /* 🔶 `email` above stays on Gmail until the Google Workspace mailbox exists —
+     swap it to an @wipeg.online address only once that can receive mail.
+     See docs/google-workspace.md. */
+  website: "wipeg.online",
   campus: {
     name: "Garoua Campus",
     city: "Garoua",

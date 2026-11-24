@@ -74,28 +74,54 @@ paid route in §5 becomes the sensible first move.
 
 ---
 
-## 3. Settle the domain name — there are three in the repo right now
+## 3. The domain: `wipeg.online`
 
-This has to be decided before a single DNS record is touched, because the
-Workspace is bound to the domain permanently and the code has to match it.
+Registered at Hostinger. Now set in the code in three places:
 
 ```
-src/app/layout.tsx:20   https://wipeg.cm
-src/app/sitemap.ts:6    https://wipeg.cm
-src/data/site.ts:33     website: "WipegGaroua.com"
-src/data/site.ts:33     email:   "wipeggaroua@gmail.com"
+src/app/layout.tsx:20   metadataBase   https://wipeg.online
+src/app/sitemap.ts:7    SITE_URL       https://wipeg.online
+src/data/site.ts:36     website        wipeg.online
 ```
 
-Say which domain was actually bought from Hostinger and all four can be made
-to agree in one commit. Two notes on the choice:
+`school.email` in `src/data/site.ts` is deliberately **still**
+`wipeggaroua@gmail.com`. It stays there until a Workspace mailbox actually
+exists — putting `info@wipeg.online` on a live contact page before that
+address can receive mail would quietly lose real enquiries.
 
-- **`.cm` is probably not a Hostinger TLD** — the Cameroon registry runs
-  through ANTIC/Camtel. If the plan is `wipeg.cm`, that is a separate
-  registration, and the `https://wipeg.cm` in `layout.tsx` is currently
-  aspirational rather than a fact.
-- **The Workspace domain cannot be changed later** without recreating every
-  account. Every student and staff address will be `name@<this domain>`
-  forever. Pick the one WIPEG wants printed on a diploma.
+### Is `.online` a problem?
+
+Less than it looks, but it is worth being precise, because every student and
+staff address will be `name@wipeg.online`.
+
+**Deliverability: not really.** Spamhaus is explicit that filtering is not
+driven by the domain ending — sender reputation is what matters. The genuine
+risk here applies to *any* newly registered domain in *any* TLD: most
+spam-protection services treat a domain with suspicion for roughly its first
+30 days. That is a scheduling fact rather than a TLD fact, and §7 says what to
+do about it.
+
+**Perception: a little.** `wipeg.online` reads less institutional than
+`wipeg.cm` would, both to a prospective student and to whoever reviews the
+Education application. Not disqualifying — the MINESUP authorisation carries
+far more weight — but not help either.
+
+**It is revisitable, which is the part worth knowing.** Google Workspace takes
+multiple domains and domain aliases at no extra cost. If WIPEG later buys
+`wipeg.cm`, it can be added as a secondary domain: new accounts get
+`@wipeg.cm`, existing accounts gain it as a second address, and mail to both
+keeps working.
+
+What is *awkward* rather than impossible is promoting that second domain to
+primary. Google does support the switch, but it does not rename anybody — each
+account's address has to be changed afterwards, by hand or in bulk — and at
+least one guide claims Education editions cannot change primary domain at all
+(that claim is about three years old, so it needs checking against the current
+rules if it ever matters).
+
+So the working assumption: `wipeg.online` is the permanent **account** domain,
+and any future `wipeg.cm` is a pretty **public** domain layered over it. That
+is a perfectly normal arrangement and not a compromise worth paying to avoid.
 
 ---
 
@@ -238,6 +264,23 @@ the record is published — generating it is not enough, and this is the step
 people skip. Start DMARC at `p=none` and tighten it to `quarantine` only after
 a few weeks of clean reports.
 
+### Warm the domain up before the first real send
+
+`wipeg.online` was registered days ago, and most spam-protection services
+distrust a domain for roughly its first 30 days regardless of TLD. The first
+thing this system will do at scale is email a cohort of applicants their
+admission decision — which is exactly the kind of send that gets a young
+domain blocked, and exactly the kind you cannot afford to have land in spam.
+
+So, in order: get SPF, DKIM and DMARC right (above), then spend a few weeks
+using the domain for ordinary staff-to-staff and staff-to-enquirer
+correspondence before any batch goes out. The booking confirmations from step 6
+of [prompt.md](../prompt.md) make good natural warm-up traffic — low volume,
+real recipients, people who expect the mail and will open it.
+
+Worth scheduling backwards from the first intake rather than discovering it the
+week of.
+
 ---
 
 ## 8. What the backend needs once the Workspace is live
@@ -273,13 +316,14 @@ Every one of these already has a placeholder waiting in
 
 ```
 [ ]  1. Get the MINESUP authorisation PDF from the administration
-[ ]  2. Confirm which domain was bought; align the four places in the code
+[x]  2. Domain settled: wipeg.online, and the code now agrees
 [ ]  3. Add the domain in Vercel; add A + CNAME at Hostinger (keep DNS there)
 [ ]  4. Make the homepage read as a school, authorisation number in the footer
 [ ]  5. Buy one Business Starter seat on the domain -> unblocks the backend
 [ ]  6. Verify the domain (TXT), apply for Education, upload the PDF
 [ ]  7. Add MX + SPF + DKIM + DMARC; delete Hostinger's default mail records
 [ ]  8. Turn on 2-step verification for admin@ and every staff account
+[ ]  8b. Warm the domain up with real low-volume mail before the first intake
 [ ]  9. Google Cloud project, OAuth client (Internal), service account, calendar
 [ ] 10. Fill backend/.env -> prompt.md step 3 can start
 ```
@@ -294,5 +338,9 @@ Steps 1 and 2 are WIPEG's to answer. Steps 3 to 10 can be done together.
 - [Get started with Google Workspace for Education](https://support.google.com/a/answer/2856827)
 - [Google Workspace for Education FAQ — approval times](https://knowledge.workspace.google.com/admin/getting-started/editions/google-workspace-for-education-faq)
 - [Verify your domain for Google Workspace](https://support.google.com/a/answer/60216)
+- [Change your primary domain for Google Workspace](https://support.google.com/a/answer/7009324)
+- [Rename user addresses in bulk after changing your primary domain](https://knowledge.workspace.google.com/admin/domains/rename-user-addresses-in-bulk-after-changing-your-primary-domain)
+- [Spamhaus on new domains and email deliverability](https://www.spamhaus.org/resource-hub/domain-reputation/xyzs-best-practice-on-new-domains-and-email-deliverability/)
+- [Does the TLD affect email deliverability? (Suped)](https://www.suped.com/learn/email-deliverability/does-the-top-level-domain-tld-affect-email-deliverability)
 - [MINESUP — an example institutional authorisation record](https://www.minesup.gov.cm/index.php/centuring-innovating-higher-institute/)
 - [Ministers warn against illegal private universities (University World News, 2022)](https://www.universityworldnews.com/post.php?story=20220216124857435)

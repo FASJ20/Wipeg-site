@@ -17,7 +17,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://wipeg.cm"),
+  metadataBase: new URL("https://wipeg.online"),
   title: {
     default: `${school.short} — ${school.name}`,
     template: `%s | ${school.short}`,

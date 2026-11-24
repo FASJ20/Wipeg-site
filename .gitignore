@@ -27,3 +27,6 @@ preview-home.png
 
 # Backend build output.
 dist/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

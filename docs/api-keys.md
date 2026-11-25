@@ -21,15 +21,24 @@ go-live — are off the list entirely.
 most sensitive value in the file.
 
 1. [supabase.com](https://supabase.com) → New project.
-2. Name it `wipeg`, region **West EU (London)** or **Frankfurt** — closest of
-   the available regions to Cameroon.
+2. Name it `wipeg`, region **eu-west-3 (Paris)** — the closest Supabase region
+   to Cameroon, and the one the existing `N8N` project already uses.
 3. Set a database password and put it straight in a password manager. Supabase
    shows it once.
-4. Project Settings → Database → Connection string → **URI**.
-5. Paste into `DATABASE_URL`. Replace `[YOUR-PASSWORD]` with the real one.
+4. Open the project and click **Connect**, in the bar at the top of the page.
+   Not Project Settings — the connection string moved out of there, and
+   guides still telling you to look under Settings → Database are out of date.
+5. Choose **Direct connection** for local work, or **Session pooler** if your
+   network is IPv4 only. Copy the URI into `DATABASE_URL` and replace
+   `[YOUR-PASSWORD]` with the real one.
 
-Use the **pooled** connection (port 6543) when the API is deployed to a
-serverless host, and the direct one (5432) locally.
+Use the **transaction pooler** (port 6543) when the API is deployed to a
+serverless host, and the direct connection (5432) locally.
+
+> **If you cannot find any of this, check you are inside a project.** The
+> Connect button only exists on a project page. At the organisation level
+> there is nothing to connect to, which is the usual reason this looks like a
+> missing menu rather than a missing project.
 
 > Do not touch the existing `N8N` project. This is a new one.
 

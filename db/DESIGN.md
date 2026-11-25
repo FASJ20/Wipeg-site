@@ -1,10 +1,10 @@
 # WIPEG academic records — database design
 
 **Status:** designed, written and tested. **Not deployed.** Nothing exists yet
-but three files: `db/schema.sql` (26 tables, 12 views), `db/rollback.sql`, and
+but three files: `db/schema.sql` (24 tables, 8 views), `db/rollback.sql`, and
 `db/test_rules.py`, which starts a real throwaway PostgreSQL, applies the
 schema and tries to break every rule the design claims to enforce. It currently
-passes 66 of 66.
+passes 50 of 50.
 
 **Scope:** students, lecturers, departments, courses, awards, fees, admissions,
 campuses, levels, classes and academic years.
@@ -384,7 +384,7 @@ currency does not have. `currency` is a column anyway, checked to `'XAF'`, so
 the day WIPEG bills anything else the constraint fails loudly instead of
 silently mixing units.
 
-**Row-level security is on for all 26 tables with no policies**, which in
+**Row-level security is on for all 24 tables with no policies**, which in
 Supabase means the anon and publishable keys can read nothing at all. The
 application reaches the database only server-side with the service role, which
 bypasses RLS. If a key ever leaks into browser JavaScript, it opens nothing.

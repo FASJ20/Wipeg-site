@@ -249,6 +249,13 @@ CREATE TABLE persons (
   personal_email    text,
   school_email      text UNIQUE,             -- the Workspace account, once created
 
+  -- Google's own id for that Workspace account, filled on first sign-in.
+  -- Sign-in matches on this rather than on school_email, because an
+  -- address can be changed in the Admin console and this cannot. A person
+  -- who has never signed in has a school_email and a null google_sub.
+  google_sub        text UNIQUE,
+  last_signed_in_at timestamptz,
+
   preferred_language text NOT NULL DEFAULT 'en'
                       CHECK (preferred_language IN ('en', 'fr')),
 
@@ -920,6 +927,46 @@ HAVING COALESCE(sum(fsi.amount), 0) <> fs.tuition_total;
 
 
 -- ###########################################################################
+--  LAYER 6 — THE RECORD
+--
+--  WIPEG runs one Admin role. Whoever can enter a receipt can also change a
+--  matricule and a fee schedule, which is a fair trade at this size but
+--  removes separation of duties entirely. This table is what replaces it: if
+--  anyone can do anything, the record of who actually did what is the only
+--  control left.
+--
+--  Append-only. The API never issues UPDATE or DELETE against it, and a row
+--  keeps the actor's email as text so the entry still names somebody after
+--  the person record is gone.
+-- ###########################################################################
+
+CREATE TABLE audit_log (
+  id           bigserial PRIMARY KEY,
+  at           timestamptz NOT NULL DEFAULT now(),
+
+  -- Null for an action taken by a timed job or by an unauthenticated caller.
+  actor_id     uuid REFERENCES persons(id) ON DELETE SET NULL,
+  -- Copied at write time on purpose: see above.
+  actor_email  text,
+  actor_role   text CHECK (actor_role IN ('admin', 'lecturer', 'student', 'job', 'public')),
+
+  action       text NOT NULL,          -- 'enrol', 'record_receipt', 'grant_role'
+  entity       text NOT NULL,          -- the table or concept acted on
+  entity_id    text,                   -- text, since not every key is a uuid
+
+  summary      text NOT NULL,          -- one line, readable without the diff
+  before       jsonb,
+  after        jsonb,
+
+  ip           inet,
+  user_agent   text
+);
+
+CREATE INDEX audit_log_at     ON audit_log (at DESC);
+CREATE INDEX audit_log_actor  ON audit_log (actor_id, at DESC);
+CREATE INDEX audit_log_entity ON audit_log (entity, entity_id, at DESC);
+
+-- ###########################################################################
 --  ROW LEVEL SECURITY
 --
 --  Every table is locked and no policy is created, so the anon and
@@ -930,6 +977,7 @@ HAVING COALESCE(sum(fsi.amount), 0) <> fs.tuition_total;
 --  given direct logins.
 -- ###########################################################################
 
+ALTER TABLE audit_log                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campuses                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE departments              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE awards                   ENABLE ROW LEVEL SECURITY;

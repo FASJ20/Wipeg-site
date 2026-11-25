@@ -1,4 +1,33 @@
-# Build the WIPEG backend — 12 steps
+# Build the WIPEG backend
+
+> ## Where this stands — read this first
+>
+> **Steps 1–4 and 6 are built, and are in `backend/`.** They were written and
+> run against a real PostgreSQL, not just typed out: the server boots, the
+> catalogue answers, the guards refuse the wrong caller, validation returns
+> per-field errors and the rate limiter bites. What is in the repository is
+> working code, not a sketch.
+>
+> | Step | State |
+> |---|---|
+> | 1. A database to talk to | waiting on the Supabase project — see `docs/api-keys.md` |
+> | 2. Skeleton that starts and answers | **done** |
+> | 3. Sign in with Google | **done** |
+> | 4. Guards, validator, audit log | **done** |
+> | 5. Public catalogue | **done**; the enquiry form is dropped, see below |
+> | 6. Call booking | **done**, on Google Calendar only |
+> | 7. Admissions desk and call diary | **removed** — no lead pipeline |
+> | 8–12 | not started |
+>
+> **Two things were removed from the plan since this file was written.**
+> Lead management is gone: no `admissions` table, no funnel, no stages. And
+> booking no longer touches the database — Google Calendar is the booking
+> system, not something the backend mirrors. The WhatsApp reminder job went
+> with it, because Google now sends the reminders. Steps 7 and 12 below are
+> edited to match; the schema note in `db/schema.sql` explains why.
+>
+> Start the next session at **Step 8**.
+
 
 ## How to use this file
 
@@ -36,8 +65,8 @@ Tick them off here as you go:
 
 | File | What it is |
 |---|---|
-| `db/API.md` | All 102 endpoints and who may call each. **The contract. Do not invent endpoints that are not in it, and do not change a path.** |
-| `db/schema.sql` | 26 tables, 12 views. Already written and tested. |
+| `db/API.md` | All 84 endpoints and who may call each. **The contract. Do not invent endpoints that are not in it, and do not change a path.** |
+| `db/schema.sql` | 24 tables, 8 views. Already written and tested. |
 | `db/DESIGN.md` | Why the schema is shaped this way. Read before arguing with it. |
 
 **Architecture: Models, Controllers, Routes. No exceptions.**
@@ -113,7 +142,7 @@ person          student         staff           staffRole       document
 class           offering        teachingAssignment               enrolment
 admission       admissionContact                appointment
 feeSchedule     studentCharge   feeReceipt
-report          ← the 12 views, read-only, one function each
+report          ← the 8 views, read-only, one function each
 ```
 
 Each exports plain functions: `findById`, `list`, `create`, `update`, and
@@ -206,7 +235,7 @@ that reaches it.
 **Do:**
 1. Check with Fai whether the Supabase project exists yet. If not, **stop and
    ask** — creating it costs money and is his decision, not yours.
-2. Once it exists, apply `db/schema.sql` to it. Confirm 26 tables and 12 views.
+2. Once it exists, apply `db/schema.sql` to it. Confirm 24 tables and 8 views.
 3. Seed the real campuses, departments and specialisations from
    `src/data/site.ts`. Read that file; do not invent names, codes or
    specialisations. Anything you cannot find there, leave out and list it.
@@ -216,7 +245,7 @@ that reaches it.
 5. `cp backend/.env.example backend/.env` and fill in `DATABASE_URL`. Do not
    commit `.env`.
 
-**Done when:** `psql "$DATABASE_URL" -c "\dt"` lists 26 tables, the campuses
+**Done when:** `psql "$DATABASE_URL" -c "\dt"` lists 24 tables, the campuses
 and departments match `src/data/site.ts` exactly, and one admin exists.
 
 **STOP.** Write down what you seeded and what you could not.
@@ -460,44 +489,16 @@ a reason returns `422`.
 
 ---
 
-# Step 7 — The admissions desk and the call diary
+# Step 7 — REMOVED
 
-**Goal:** `API.md` groups F and G — 13 endpoints. The office can now work what
-steps 5 and 6 bring in.
+There is no admissions desk and no call diary.
 
-**Create:** `models/admissionContact.model.ts`,
-`controllers/admissions.controller.ts`,
-`controllers/appointments.controller.ts`, their routes. Extend
-`models/appointment.model.ts` and `models/report.model.ts`.
+The lead pipeline assumed somebody at WIPEG would advance a candidate from
+`applied` to `offered` every day. Nobody was going to, and a CRM nobody
+updates is worse than none — it shows stale stages that look authoritative.
+The call diary was a second copy of the Google Calendar.
 
-**Do:**
-- `GET /api/admissions` reads the funnel with filters from `API.md`. Keyset
-  paging, newest first, and a `never_contacted` filter — the
-  `admissions_funnel` view already computes that.
-- `POST /api/admissions/:id/accept` is a transaction: create or reuse the
-  person, create the `students` row, set stage `accepted` with `decided_by`
-  from the session. Guardian name and phone are `NOT NULL` on `students`, so
-  refuse with `422` naming them if the desk has not collected them. **Do not
-  enrol anybody here** — that is step 9, and usually a different person on a
-  different day.
-- Reuse an existing person when the phone already matches one. Two records for
-  one human is the failure this whole schema is shaped to avoid.
-- `GET /api/appointments` reads the `appointment_diary` view, **unclaimed calls
-  first** — a null staff name is what the morning meeting is about.
-- `POST /api/appointments/:id/assign` sets `staff_id` from the session, and
-  returns `conflict` if somebody else claimed it first.
-- `POST /api/appointments/:id/outcome` writes `held` or `no_show` **and** an
-  `admission_contacts` row, so the note sits with every other call and message
-  about that candidate rather than only on the booking.
-- Admin reschedule and cancel reuse the step 6 service. One code path for
-  Google Calendar, not two.
-
-**Done when:** accepting a candidate with a phone that already exists creates a
-student but no second person; accepting without a guardian returns `422` naming
-it; two admins claiming one call produce one success and one `conflict`;
-marking a call held leaves both the appointment status and a contact log entry.
-
-**STOP.**
+Skip to Step 8.
 
 ---
 
@@ -646,7 +647,7 @@ all.
 
 ---
 
-# Step 12 — Jobs, WhatsApp reminders, Google provisioning
+# Step 12 — The timed jobs and Google Classroom
 
 **Goal:** `API.md` groups O and P — 11 endpoints. The background work.
 

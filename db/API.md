@@ -8,7 +8,7 @@ built. You do not need to be a programmer to read Parts 1 to 3.
 structure. `prompt.md` in the project root is the step-by-step instruction set
 for building it.
 
-**Companions:** `db/DESIGN.md` explains the 26 tables. `db/schema.sql` is the
+**Companions:** `db/DESIGN.md` explains the 24 tables. `db/schema.sql` is the
 database itself.
 
 ---
@@ -17,11 +17,11 @@ database itself.
 
 | Word | What it means here |
 |---|---|
-| **Endpoint** | One thing the system can do, reachable at its own web address. "Record a receipt" is an endpoint. There are 102 of them. |
+| **Endpoint** | One thing the system can do, reachable at its own web address. "Record a receipt" is an endpoint. There are 84 of them. |
 | **GET** | An endpoint that only *reads*. It changes nothing. Safe to call twice. |
 | **POST / PATCH / PUT** | An endpoint that *writes* something — creates, changes or records. |
 | **Token** | A long unguessable code in a link. We send these to visitors who have no account, so they can see their own booking and nothing else. |
-| **Job** | Something the system does on a timer, with nobody logged in — like sending a WhatsApp reminder before a call. |
+| **Job** | Something the system does on a timer, with nobody logged in — like messaging students whose fee instalment is overdue. |
 
 ---
 
@@ -95,72 +95,58 @@ This is new, and it is the part of the system a visitor will touch first. Here
 is the whole thing as a story.
 
 **1. A visitor on the website clicks "Book a call".**
-The page asks the system for free times. The system looks at the WIPEG
-admissions Google Calendar, removes anything already busy, and offers the
-remaining 30-minute slots inside office hours for the next 14 days.
+The page asks the system for free times. The system reads free/busy from the
+WIPEG admissions Google Calendar, removes anything already taken, and offers
+the remaining 30-minute slots inside office hours for the next 14 days.
 
-**2. They pick a slot and fill in the short form.**
-Name, phone, email, which campus, what they want to study, and which level.
-Those last three are not decoration — they are what turns the booking into a
-real enquiry the admissions office can work on.
+**2. They pick a slot and say how they want to meet.**
+Name, phone, optionally an email, and **online or at the campus**. Online
+means a Google Meet link; onsite means they are coming to Garoua.
 
-**3. The system does four things at once, or none of them.**
-- Creates an enquiry in the admissions list, at stage **lead**
-- Creates the booking, linked to that enquiry
-- Creates the event in **Google Calendar**, with the visitor's name, phone and
-  interest in the description
-- Sends the visitor a confirmation with their private link
+**3. The system writes one event onto the Google Calendar.**
+The visitor's name, phone, department of interest and what they want to
+discuss all go in the description, so whoever opens the event has everything
+they need without looking anything up. An online booking gets a Meet link
+attached; an onsite booking gets the campus address as the location.
 
-If Google Calendar is down, the booking is still saved and a job adds the
-calendar event later. A visitor is never told "try again" because of an outage
-on Google's side.
+Nothing is written to the WIPEG database except a single audit line. There is
+no enquiry record, no lead stage, no second copy of the appointment.
 
-**4. The admissions desk sees it in the diary.**
-A new booking belongs to nobody yet. The morning view shows unclaimed calls
-first. An admin clicks "I'll take this", and the booking now has their name on
-it.
+**4. Google sends the invitation and the reminders.**
+If the visitor gave an email they get a calendar invitation immediately, and
+Google reminds both sides before the call. That is deliberate: a reminder
+from Google arrives from an address every mail provider already trusts, where
+one from a domain registered last week would land in spam.
 
-**5. Shortly before the call, WhatsApp rings.**
-Every few minutes a job looks for calls starting within two hours that nobody
-has been reminded about. For each one, it sends a WhatsApp message to the
-assigned member of staff:
-
-> *Call in 1h 45m — MBOM Eric, +237 6 55 59 60 57, interested in Computer
-> Engineering Level 1, Garoua campus. Open: wipeg.../appointments/…*
-
-Then it stamps the booking as reminded, so the message cannot be sent twice no
-matter how often the job runs.
-
-**6. After the call**, the admin marks it **held** or **no show** and writes a
-note. That note lands on the enquiry, not just on the booking, so it sits
-alongside every WhatsApp message and phone call that followed.
+**5. Staff see it on the phones they already carry.**
+The booking appears on the shared calendar in everyone's Google Calendar app.
+If the call has to move, they move it there, and it is moved — no second
+system to update, nothing to reconcile, and nothing to train anybody on.
 
 ### What the booking is built on
 
 | Piece | What it does |
 |---|---|
-| `appointments` table | One row per booked call. Holds the time, who is taking it, the Google event id, and when the reminder went out |
-| `appointment_diary` view | The office's day view, ready-made. A call with no staff name is unclaimed |
-| `appointments_needing_reminder` view | Exactly the calls the WhatsApp job should message about, nothing else |
-| Google Calendar | The real calendar. The system writes to it; staff can also see it in their own Google account |
-| WhatsApp Cloud API | Meta's official WhatsApp. One approved message template, sent to the staff member's own phone number |
+| Google Calendar | The booking system. Not a mirror of one — the only copy |
+| `freeBusy` query | What makes a slot appear free or not |
+| Google Meet | Auto-attached to an online booking, by the same API call |
+| `audit_log` row | One line, so "who booked this and when" is answerable without opening the calendar |
 
-Three details that stop this breaking in practice:
+### What this costs, stated plainly
 
-- **One member of staff cannot be booked twice for the same slot.** The
-  database refuses it, not the website, so two visitors clicking at the same
-  second cannot both get the 9:00.
-- **The Google event id is unique.** If writing to Google is retried, the same
-  event cannot be created twice.
-- **`reminder_sent_at` is stamped when the message goes out.** That one column
-  is why the reminder job can run every five minutes forever and nobody gets
-  spammed.
+WIPEG cannot report on bookings with SQL, and if Google is down nobody can
+book. Both are acceptable for a handful of calls a day, and both were
+weighed against the alternative — a database table that drifts out of step
+with what staff actually see.
+
+If booking volume ever justifies reporting, copy the events into a table for
+*reading*. Do not make the database the source of truth again.
 
 ---
 
 # PART 3 — Every endpoint, and who can use it
 
-102 endpoints. **Admin can use every one of them** except the ones marked
+84 endpoints. **Admin can use every one of them** except the ones marked
 *Student* or *Link holder*, which are locked to whoever is signed in or holds
 the link — an admin reads a student's fees through the fees list, not by
 pretending to be them.
@@ -189,15 +175,26 @@ per hour from one internet connection and 3 per day from one phone number,
 requires a "not a robot" check, and treats a second enquiry from the same
 number in the same year as an update rather than a new lead.
 
-## C. Booking a call — 5
+## C. Booking a call — 2
+
+Booking lives in Google Calendar, not in this database. There is no
+appointments table and no booking record to look up later: the shared WIPEG
+calendar is the only copy, which is why staff can move a call from their
+phone and have it actually move.
+
+That is also why there are two endpoints here and not five. Rescheduling and
+cancelling are done by whoever owns the calendar — the visitor replies to
+Google's own invitation, or phones the campus.
 
 | | Address | What it does | Who |
 |---|---|---|---|
-| GET | `/api/booking/slots` | Free times for the next 14 days, from Google Calendar | Anyone |
-| POST | `/api/booking` | Book a call. Creates the enquiry, the booking and the calendar event | Anyone |
-| GET | `/api/booking/:token` | A visitor seeing their own booking | Link holder |
-| POST | `/api/booking/:token/reschedule` | Move it to another free slot | Link holder |
-| POST | `/api/booking/:token/cancel` | Cancel it, and free the slot | Link holder |
+| GET | `/api/booking/slots?date=` | Free 30-minute slots on a day, read from Google Calendar | Anyone |
+| POST | `/api/booking` | Book the call. Writes the event; an online call gets a Meet link, a campus visit gets the address | Anyone |
+
+A booking carries `mode`: `online` or `onsite`. Online adds a Google Meet
+link to the event; onsite sets the location to the Garoua campus. Google
+sends the invitation and the reminders either way, from a Google address
+rather than from a domain registered last week.
 
 ## D. Students — 6
 
@@ -225,28 +222,21 @@ to ask for somebody else's — the address has no space for another person's id.
 A lecturer sees a class list only if the system says they teach that class.
 Having the job title "Lecturer" opens nothing by itself.
 
-## F. Admin — the admissions desk — 7
+## F — G. Removed: the admissions desk and the call diary
 
-| | Address | What it does | Who |
-|---|---|---|---|
-| GET | `/api/admissions` | The work queue. Filter by stage, campus, department, year, never-contacted | Admin |
-| GET | `/api/admissions/:id` | One candidate, with every call and message logged against them | Admin |
-| PATCH | `/api/admissions/:id` | Move them along: lead → applied → offered → accepted | Admin |
-| POST | `/api/admissions/:id/contacts` | Log a WhatsApp, a phone call, a visit | Admin |
-| POST | `/api/admissions/:id/accept` | Turn a candidate into a real student record | Admin |
-| GET | `/api/admissions/funnel` | How many people at each stage, by campus and department | Admin |
-| GET | `/api/admissions/interest` | What next year's Level 2 students say they want to specialise in | Admin |
+Thirteen endpoints used to sit here, managing a lead pipeline and a diary of
+booked calls. Both are gone.
 
-## G. Admin — the call diary — 6
+**The pipeline** assumed somebody advances a lead from `applied` to `offered`
+every day. Nobody at WIPEG was going to, and a CRM nobody updates is worse
+than no CRM — it shows stale stages that look authoritative. Enquiries are
+answered on the phone and on WhatsApp, which is where they were being
+answered anyway.
 
-| | Address | What it does | Who |
-|---|---|---|---|
-| GET | `/api/appointments` | The diary. Unclaimed calls first | Admin |
-| GET | `/api/appointments/:id` | One booking with the enquiry behind it | Admin |
-| POST | `/api/appointments/:id/assign` | "I'll take this call" | Admin |
-| PATCH | `/api/appointments/:id` | Change the time or the channel; updates Google Calendar too | Admin |
-| POST | `/api/appointments/:id/outcome` | Mark it held or no-show, and write what was said | Admin |
-| POST | `/api/appointments/:id/cancel` | Cancel, with a reason, and remove the calendar event | Admin |
+**The call diary** was a second copy of the calendar. See group C.
+
+A person now first appears in this system at enrolment, which is the point
+WIPEG actually commits to them.
 
 ## H. Admin — student records — 7
 
@@ -383,15 +373,13 @@ The only endpoints that talk to the outside world.
 Every one of these can be run again safely. The database column each writes to
 is unique, so a retry cannot create a second Group or a second Classroom.
 
-## P. Automatic jobs — 6
+## P. Automatic jobs — 4
 
 No login. A secret key in the request, and they refuse to run for a signed-in
 person who finds the address.
 
 | | Address | What it does | How often |
 |---|---|---|---|
-| POST | `/api/jobs/appointment-reminders` | WhatsApp the staff member before each call | Every 5 minutes |
-| POST | `/api/jobs/sync-calendar` | Add Google Calendar events for bookings that have none | Every 10 minutes |
 | POST | `/api/jobs/fee-reminders` | Message students whose instalment is due or overdue | Daily, 08:00 |
 | POST | `/api/jobs/provision-pending` | Retry Google Groups and Classrooms that failed | Hourly |
 | POST | `/api/jobs/nightly-checks` | Read the should-be-empty reports and alert if not | Daily, 02:00 |
@@ -436,7 +424,7 @@ backend/
     controllers/   one function per endpoint. Decides things; never writes SQL
     routes/        matches a web address to a controller, and says who may call it
     middleware/    sign-in, role checks, input checking, errors, rate limits
-    services/      talking to Google Calendar, WhatsApp, file storage
+    services/      talking to Google Calendar, the Workspace directory, file storage
     jobs/          the six timed tasks
     lib/           database connection, settings, error types
     app.ts         assembles the above
@@ -519,7 +507,7 @@ Always the same shape, so every screen can handle it the same way:
 | `rate_limited` | Too many attempts from the public website |
 | `server_error` | Our fault. Logged with a reference number, details not shown |
 
-## House rules, once, for all 102
+## House rules, once, for all 84
 
 - **Lists** come back as `{ "data": [...], "next_cursor": "..." }`, never a bare
   list, so filters and totals can be added later without breaking anything.
@@ -559,15 +547,18 @@ the repository, none visible in a browser.
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | creating accounts, Groups, Classrooms, calendar events |
 | `GOOGLE_CALENDAR_ID` | the admissions calendar bookings are written to |
 | `BOOKING_*` | office hours, slot length, how far ahead to offer |
-| `WHATSAPP_PHONE_NUMBER_ID` / `_ACCESS_TOKEN` | sending the reminder |
-| `WHATSAPP_TEMPLATE_APPOINTMENT_REMINDER` | the approved message template name |
 | `LINK_TOKEN_SECRET` | the private links sent to visitors |
-| `CRON_SECRET` | the six timed jobs |
+| `CRON_SECRET` | the four timed jobs |
 | `TURNSTILE_SECRET_KEY` | the "not a robot" check on public forms |
 
 The Google service account key is the most dangerous of these — it can act as
-any user in the Workspace. Limit it to the calendar, directory and Classroom
-permissions actually listed above, and nothing else.
+any user in the Workspace. Limit it to the two scopes the code actually
+uses — `calendar.events` and `admin.directory.user` — and nothing else.
+
+**No WhatsApp key is needed any more.** Reminders were ours to send only
+because our database owned the appointment. Google Calendar owns it now and
+sends its own, so the Meta Business verification and template approval are
+off the list entirely.
 
 ## Known gaps
 
@@ -596,7 +587,7 @@ than building: the matricule format, the specialisation codes, **the full subjec
 list** — codes, titles, credit hours, and which specialisation and level each
 belongs to, which is the biggest gap — the fee structure per specialisation and
 level with instalment amounts and dates, how many semesters a WIPEG year has,
-the staff list, office hours for bookings, which staff phone the WhatsApp
+the staff list, office hours for bookings, which staff take the
 reminders go to, and confirmation that Levels 1–2 = HND, 3 = Bachelor,
 4–5 = Master in every department.
 
@@ -610,7 +601,7 @@ enough to check before starting the next. In summary:
 | 1 | Create the Supabase project, load the schema, seed real campuses and departments | Everything needs a database |
 | 2 | Backend skeleton: folders, connection, settings, errors | The files every other step imports |
 | 3 | Sign in with Google, and `/api/me` | Nothing can be protected until someone can sign in |
-| 4 | Role checks and input checking | Written once, correctly, rather than 102 times |
+| 4 | Role checks and input checking | Written once, correctly, rather than 84 times |
 | 5 | Public catalogue and the enquiry form | The first thing with a real user waiting |
 | 6 | **Call booking**, with Google Calendar | The new piece. Needs steps 4 and 5 underneath it |
 | 7 | The admissions desk and the call diary | Makes steps 5 and 6 worth something |
@@ -618,6 +609,6 @@ enough to check before starting the next. In summary:
 | 9 | Enrolment, with the copy-the-charges transaction | The spine of the whole system |
 | 10 | Fees | Charges hang off enrolments, so this comes after |
 | 11 | Student and lecturer self-service | All reads. Nothing new underneath |
-| 12 | WhatsApp reminders, the other jobs, Google provisioning | Background work, easiest last |
+| 12 | The timed jobs and Google Classroom provisioning | Background work, easiest last |
 
 Steps 1 to 4 are about a day. Step 9 is the one to review carefully.

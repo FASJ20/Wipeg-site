@@ -8,22 +8,29 @@ import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { GlowField } from "@/components/ui/GlowField";
 import { Reveal } from "@/components/ui/Reveal";
-import { school } from "@/data/site";
+import { school, testimonials } from "@/data/site";
 
 export const metadata: Metadata = {
-  title: "Testimonials",
+  title: "Share your story",
   description:
-    "WIPEG graduates on what the institute gave them — hands-on training, fees payable in installments, and free driving and English lessons.",
+    "Studied at WIPEG? Tell us what the institute gave you, in your own words. Nothing is published until you have agreed to it.",
 };
 
 export default function TestimonialsPage() {
   return (
     <>
+      {/* This page is currently a collection page: there are no published
+          quotes yet (see the note on `testimonials` in src/data/site.ts).
+          When real, consented quotes are added they appear below, and this
+          hero plus the nav label should go back to "Testimonials". */}
       <PageHero
-        eyebrow="Testimonials"
-        title="What our graduates say"
-        intro="WIPEG graduates working across software, marketing and entertainment on what the institute actually gave them."
-        breadcrumb={[{ label: "Home", href: "/" }, { label: "Testimonials" }]}
+        eyebrow="Share your story"
+        title="Tell us what WIPEG gave you"
+        intro="We are collecting stories from graduates across all ten departments. Yours goes up in your own words, with your name and what you do today — and only once you have agreed to it."
+        breadcrumb={[
+          { label: "Home", href: "/" },
+          { label: "Share your story" },
+        ]}
       >
         <Button href="#share" variant="accent" size="lg">
           Share your testimonial
@@ -33,10 +40,13 @@ export default function TestimonialsPage() {
 
       {/* The same section the home page uses, minus its duplicate heading.
           No container-page wrapper here — the component brings its own, and
-          nesting the two double-pads the content. */}
-      <div className="bg-white pt-20 lg:pt-24">
-        <Testimonials showHeading={false} />
-      </div>
+          nesting the two double-pads the content. Guarded so the padding does
+          not leave a blank band while there are no quotes to show. */}
+      {testimonials.length > 0 && (
+        <div className="bg-white pt-20 lg:pt-24">
+          <Testimonials showHeading={false} />
+        </div>
+      )}
 
       {/* ------------------------ share your own ------------------------ */}
       <section id="share" className="scroll-mt-24 bg-tint py-24 lg:py-32">
@@ -97,7 +107,7 @@ export default function TestimonialsPage() {
               <div className="relative mx-auto max-w-2xl">
                 <Eyebrow tone="dark">Your turn</Eyebrow>
                 <h2 className="mt-5 text-[2rem] font-extrabold leading-[1.12] sm:text-[2.6rem]">
-                  Start the programme they started
+                  Start your own story
                 </h2>
                 <p className="mt-5 text-[0.98rem] leading-relaxed text-white/65">
                   Admissions are open across all ten departments, at the{" "}

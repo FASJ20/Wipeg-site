@@ -142,7 +142,7 @@ export function Footer() {
                 ["About WIPEG", "/about"],
                 ["All programmes", "/programmes"],
                 ["Admissions", "/admissions"],
-                ["Testimonials", "/testimonials"],
+                ["Share your story", "/testimonials"],
                 ["Campus & facilities", "/campus"],
                 ["Contact us", "/contact"],
               ].map(([label, href]) => (

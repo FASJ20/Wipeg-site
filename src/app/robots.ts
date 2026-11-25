@@ -7,10 +7,14 @@ import { SITE_URL } from "./sitemap";
  * NEXT_PUBLIC_ALLOW_INDEXING is explicitly set to "true".
  *
  * Preview and claimable deployments therefore stay unindexed, which matters
- * while the site still carries placeholder content (drafted testimonial
- * quotes, invented entry requirements) alongside WIPEG's real name, accreditation number
- * and phone numbers. Set the variable on the production domain once the
- * REPLACE-ME.md items have been swapped for real information.
+ * while the site still carries placeholder content (unconfirmed entry
+ * requirements, illustrative facilities and intake sizes) alongside WIPEG's
+ * real name, accreditation number and phone numbers. Set the variable on the
+ * production domain once the REPLACE-ME.md items have been swapped for real
+ * information.
+ *
+ * The drafted testimonial quotes that used to be the worst of these are gone
+ * — removed rather than published unapproved. See REPLACE-ME.md §4.
  */
 export const isIndexable = process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true";
 

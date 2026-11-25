@@ -27,13 +27,22 @@ export function Testimonials({ showHeading = true }: { showHeading?: boolean }) 
   const t = testimonials[i];
 
   useEffect(() => {
-    if (paused) return;
+    /* `< 2` covers both cases that make rotating pointless or unsafe: an
+       empty list (% 0 is NaN) and a single quote with nowhere to rotate to. */
+    if (paused || testimonials.length < 2) return;
     const timer = setTimeout(
       () => setI((n) => (n + 1) % testimonials.length),
       9000,
     );
     return () => clearTimeout(timer);
   }, [i, paused]);
+
+  /* No consented quotes yet, so the whole section hides rather than render an
+     empty shell. Add entries to `testimonials` in src/data/site.ts and both
+     the home page and /testimonials pick it up again with no other change.
+     This sits below the hooks on purpose — returning earlier would make the
+     hook calls conditional. */
+  if (!t) return null;
 
   return (
     <section

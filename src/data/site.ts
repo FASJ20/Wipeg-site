@@ -372,15 +372,22 @@ export const stats = [
   { value: branches.length, suffix: "", label: "Campuses nationwide" },
 ];
 
-/* Testimonials — the NAMES and ROLES below are real, supplied by the school.
-   🔶 The QUOTES are drafts written here, not words these people actually
-   said. Every one needs the named person to approve or rewrite it before
-   this site is published. Never add a testimonial for someone who has not
-   agreed to it.
+/* Testimonials — EMPTY ON PURPOSE.
 
-   `photo` is intentionally absent: a real person's name must never be paired
-   with a stock or AI face. The section renders initials until real, consented
-   portraits exist — drop a file in /public/images and set `photo` to use it. */
+   Three quotes used to sit here, attributed to three real people whose names
+   and roles the school supplied (they are recorded in REPLACE-ME.md §4). The
+   words themselves were drafted here, not said by those people, so they were
+   removed rather than published without consent.
+
+   To bring the section back, add entries below. Nothing else needs touching:
+   the component and the /testimonials page render themselves again the moment
+   this array is non-empty, and hide themselves while it is empty.
+
+   Two rules for anything added here:
+   - the named person wrote or approved their own words;
+   - `photo` stays absent unless it is a real, consented photograph of that
+     person. A real name must never wear a stock or AI face — the section
+     renders initials instead. */
 export type Testimonial = {
   name: string;
   role: string;
@@ -388,26 +395,7 @@ export type Testimonial = {
   photo?: string;
 };
 
-export const testimonials: Testimonial[] = [
-  {
-    name: "Fai Arnold",
-    role: "Software Engineer",
-    quote:
-      "The engineering track was hands-on from the start — we built and broke things on real machines rather than copying notes. That is the habit I still work with every day.",
-  },
-  {
-    name: "Fai Sheryl",
-    role: "Marketer",
-    quote:
-      "What WIPEG gave me beyond the certificate was confidence in a room. The lecturers pushed us to present, defend an idea and take feedback, which is most of the job.",
-  },
-  {
-    name: "Viban Randolph",
-    role: "Entertainment",
-    quote:
-      "Paying in installments made it possible for me to finish, and the free English classes opened doors I did not expect. WIPEG genuinely is a place to be.",
-  },
-];
+export const testimonials: Testimonial[] = [];
 
 /* ✅ FLIER-derived answers, phrased for the web */
 export const faqs = [
@@ -498,7 +486,7 @@ export const navigation = [
     })),
   },
   { label: "Admissions", href: "/admissions" },
-  { label: "Testimonials", href: "/testimonials" },
+  { label: "Share your story", href: "/testimonials" },
   { label: "Campus", href: "/campus" },
   { label: "Contact", href: "/contact" },
 ];

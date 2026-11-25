@@ -46,9 +46,23 @@ To bring it back later you need, per person: real name, real role, and a
 portrait they have consented to (portrait crop, roughly 4:5). Ask me and I'll
 rebuild it — the design is in git history at commit `bfcf089`.
 
-## 4. Testimonials — real names, drafted words
+## 4. Testimonials — REMOVED from the site
 
-The section is back with three **real** graduates supplied by the school:
+🔴 **Nothing is published.** `testimonials` in `src/data/site.ts` is now an
+empty array, the home page no longer renders the section, and `/testimonials`
+has become a collection page ("Share your story") carrying only the form.
+
+The reason: the quotes below were **drafted here, not said by these people**,
+and publishing words someone did not write under their own name is not
+something to do while waiting for them to get round to approving it.
+
+**To restore it:** get each person to write or approve their own quote, then
+add entries to `testimonials` in `src/data/site.ts`. Nothing else needs
+changing — the component and the page un-hide themselves automatically. Then
+put the nav label, the footer label and the `/testimonials` hero back to
+"Testimonials" (see the comment at the top of that page).
+
+The three names and roles the school supplied, kept here so they are not lost:
 
 | Name | Role |
 | --- | --- |
@@ -56,14 +70,12 @@ The section is back with three **real** graduates supplied by the school:
 | Fai Sheryl | Marketer |
 | Viban Randolph | Entertainment |
 
-🔶 **The quotes are drafts I wrote, not words these people said.** Each named
-person must approve or rewrite their own quote before this site is published —
-attributing invented words to a real, identifiable person is exactly the
-problem the removed placeholders had.
+The cleanest route back is to send these three the `/testimonials` page and
+let them write their own words through the form there (see section 10), then
+paste what they send into `src/data/site.ts`.
 
-Edit them in `src/data/site.ts` → `testimonials`. The cleanest fix is to send
-these three the `/testimonials` page and let them submit their own words
-through the form there — see section 10.
+Do not draft quotes on their behalf again. Putting invented words in a real,
+identifiable person's mouth is the problem this removal was fixing.
 
 **Photos:** deliberately none. The section shows initials (FA, FS, VR) rather
 than pairing a real name with a stock or AI face. When you have a real portrait

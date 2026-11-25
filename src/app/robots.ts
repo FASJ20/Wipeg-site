@@ -12,9 +12,6 @@ import { SITE_URL } from "./sitemap";
  * real name, accreditation number and phone numbers. Set the variable on the
  * production domain once the REPLACE-ME.md items have been swapped for real
  * information.
- *
- * The drafted testimonial quotes that used to be the worst of these are gone
- * — removed rather than published unapproved. See REPLACE-ME.md §4.
  */
 export const isIndexable = process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true";
 

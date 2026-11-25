@@ -12,8 +12,7 @@
 --    1. CATALOGUE   what WIPEG offers      — edited once a year, by hand
 --    2. CALENDAR    when it is offered     — edited once a year, by hand
 --    3. PEOPLE      who is involved        — one row per human, for life
---    4. DELIVERY    who is taught what     — changes constantly, and the
---                   admissions funnel that feeds it, including booked calls
+--    4. DELIVERY    who is taught what     — changes constantly
 --    5. MONEY       what is owed and received — append-only, never edited
 --
 --  A table may only depend on the layers above it. Nothing in the catalogue
@@ -567,158 +566,24 @@ CREATE UNIQUE INDEX enrolments_one_active_per_student
   ON enrolments (student_id) WHERE status = 'active';
 
 -- ---------------------------------------------------------------------------
---  ADMISSIONS — one funnel, not three tables
+--  NO ADMISSIONS FUNNEL, AND NO APPOINTMENTS TABLE
 --
---  A curious visitor, an applicant and an accepted candidate are the same
---  person pursuing the same thing at three moments. Splitting them into
---  separate tables means copying ten fields twice and letting them drift, so
---  there is one row that changes `stage` as it advances.
+--  Earlier drafts carried an `admissions` lead pipeline and an `appointments`
+--  table for calls booked from the website. Both are gone, deliberately.
+--
+--  Leads: WIPEG does not run a sales pipeline, and a half-used CRM is worse
+--  than none -- stages nobody advances, rotting in a table. Enquiries reach
+--  the registry by phone and WhatsApp, which is where they were already being
+--  answered.
+--
+--  Bookings: Google Calendar IS the booking system. The website writes the
+--  event straight to a shared WIPEG calendar and reads free/busy back out of
+--  it; nothing is mirrored here. One source of truth, and staff move or
+--  cancel a call from the phone already in their hand rather than a screen
+--  they would have to be taught. See db/API.md, "Booking a call".
+--
+--  A person therefore enters this database for the first time at enrolment.
 -- ---------------------------------------------------------------------------
-CREATE TABLE admissions (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  -- Null until the candidate is accepted and a person record is created. This
-  -- is the moment a lead stops being a stranger and becomes somebody WIPEG
-  -- holds a file on.
-  person_id           uuid REFERENCES persons(id) ON DELETE RESTRICT,
-
-  stage               text NOT NULL DEFAULT 'lead'
-                        CHECK (stage IN ('lead', 'applied', 'reviewing',
-                                         'offered', 'accepted', 'enrolled',
-                                         'rejected', 'withdrawn', 'lost')),
-
-  -- What they are applying for. At Level 1 they apply to a department and the
-  -- specialisation is only a preference, which is what makes next year's
-  -- Level 2 class sizes predictable.
-  campus_id           uuid NOT NULL REFERENCES campuses(id) ON DELETE RESTRICT,
-  department_id       uuid NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
-  specialisation_id   uuid,
-  level_applied       smallint NOT NULL REFERENCES levels(level) ON DELETE RESTRICT,
-  academic_year_id    uuid NOT NULL REFERENCES academic_years(id) ON DELETE RESTRICT,
-  delivery_mode       text NOT NULL DEFAULT 'on_campus'
-                        CHECK (delivery_mode IN ('on_campus', 'online')),
-
-  -- Entering above Level 1 means joining a specialisation directly, so it has
-  -- to be named.
-  CONSTRAINT specialisation_required_above_level_one CHECK (
-    level_applied = 1 OR specialisation_id IS NOT NULL
-  ),
-
-  FOREIGN KEY (specialisation_id, department_id)
-    REFERENCES specialisations (id, department_id) ON DELETE RESTRICT,
-
-  -- What they typed at the time, kept exactly as submitted even if the person
-  -- record is later corrected. This is the record of what was claimed.
-  surname             text NOT NULL,
-  given_names         text NOT NULL,
-  phone               text NOT NULL CHECK (phone ~ '^\+[0-9]{8,15}$'),
-  email               text,
-  prior_qualification text,                  -- 'GCE A/L', 'HND', 'Baccalaureat'
-
-  source              text CHECK (source IN ('website', 'whatsapp', 'facebook',
-                                             'flier', 'referral', 'walk_in',
-                                             'radio', 'other')),
-
-  stage_changed_at    timestamptz NOT NULL DEFAULT now(),
-  decided_at          timestamptz,
-  decided_by          text,
-  notes               text,
-
-  submitted_at        timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now(),
-
-  -- Cannot be accepted or enrolled without a person record behind it.
-  CHECK (stage NOT IN ('accepted', 'enrolled') OR person_id IS NOT NULL)
-);
-
-CREATE TRIGGER admissions_touch BEFORE UPDATE ON admissions
-  FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
-
-CREATE INDEX admissions_stage       ON admissions (stage);
-CREATE INDEX admissions_phone       ON admissions (phone);
-CREATE INDEX admissions_year        ON admissions (academic_year_id);
-CREATE INDEX admissions_campus      ON admissions (campus_id);
-CREATE INDEX admissions_department  ON admissions (department_id);
-CREATE INDEX admissions_person      ON admissions (person_id);
-
--- Every time somebody chases a lead. Without this the registry cannot tell a
--- cold lead from one nobody has called yet.
-CREATE TABLE admission_contacts (
-  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  admission_id  uuid NOT NULL REFERENCES admissions(id) ON DELETE CASCADE,
-  contacted_at  timestamptz NOT NULL DEFAULT now(),
-  channel       text NOT NULL CHECK (channel IN ('whatsapp', 'call', 'sms',
-                                                 'email', 'in_person')),
-  outcome       text CHECK (outcome IN ('reached', 'no_answer', 'promised_visit',
-                                        'not_interested', 'wrong_number')),
-  note          text,
-  recorded_by   text,
-  created_at    timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX admission_contacts_admission ON admission_contacts (admission_id, contacted_at DESC);
-
-
--- A booked call with the admissions office, made from the website. The visitor
--- picks a free slot, the booking is written to Google Calendar, and shortly
--- before it starts a WhatsApp message reminds the member of staff who is
--- taking it.
---
--- It hangs off `admissions`, not off nothing, because a stranger booking a
--- call IS an enquiry — the same person at the same moment. One funnel, as
--- with leads and applications. The booking form therefore collects what an
--- admission row needs: campus, department and intended level.
-CREATE TABLE appointments (
-  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  admission_id     uuid NOT NULL REFERENCES admissions(id) ON DELETE CASCADE,
-
-  -- Who takes the call. Null means nobody has picked it up yet, which is
-  -- exactly the list the admissions office needs to see each morning.
-  staff_id         uuid REFERENCES staff(person_id) ON DELETE RESTRICT,
-
-  starts_at        timestamptz NOT NULL,
-  ends_at          timestamptz NOT NULL,
-  channel          text NOT NULL DEFAULT 'phone'
-                     CHECK (channel IN ('phone', 'whatsapp', 'video', 'in_person')),
-
-  status           text NOT NULL DEFAULT 'booked'
-                     CHECK (status IN ('booked', 'confirmed', 'held',
-                                       'no_show', 'cancelled')),
-
-  -- The event this created in Google Calendar. Nullable and unique, so
-  -- writing to Google can be a retrying background job that cannot double up.
-  google_event_id  text UNIQUE,
-  google_calendar_id text,
-
-  -- Set the moment the WhatsApp reminder goes out, so the job can run every
-  -- few minutes without ever sending twice.
-  reminder_sent_at timestamptz,
-
-  cancelled_reason text,
-  notes            text,
-  created_at       timestamptz NOT NULL DEFAULT now(),
-  updated_at       timestamptz NOT NULL DEFAULT now(),
-
-  CHECK (ends_at > starts_at),
-  CHECK (status <> 'cancelled' OR cancelled_reason IS NOT NULL)
-);
-
-CREATE TRIGGER appointments_touch BEFORE UPDATE ON appointments
-  FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
-
-CREATE INDEX appointments_admission ON appointments (admission_id);
-CREATE INDEX appointments_upcoming  ON appointments (starts_at)
-  WHERE status IN ('booked', 'confirmed');
-
--- One member of staff cannot be booked twice for the same moment. Slots are
--- generated on a fixed grid (every 30 minutes inside office hours), so two
--- bookings either start at the same instant or do not overlap at all, and
--- equality is enough. True overlap of unequal times would need an EXCLUDE
--- constraint and the btree_gist extension; the grid makes that unnecessary.
-CREATE UNIQUE INDEX appointments_no_double_booking
-  ON appointments (staff_id, starts_at)
-  WHERE status <> 'cancelled';
-
 
 -- ###########################################################################
 --  LAYER 5 — MONEY
@@ -1012,94 +877,6 @@ SELECT
 FROM fee_receipts r
 GROUP BY r.received_on, r.method;
 
--- The admissions funnel: how many people are at each stage, and where.
-CREATE VIEW admissions_funnel AS
-SELECT
-  ay.label      AS academic_year,
-  c.name        AS campus,
-  d.name        AS department,
-  a.stage,
-  count(*)      AS candidates,
-  count(*) FILTER (WHERE ac.last_contact IS NULL) AS never_contacted
-FROM admissions a
-JOIN academic_years ay ON ay.id = a.academic_year_id
-JOIN campuses       c  ON c.id = a.campus_id
-JOIN departments    d  ON d.id = a.department_id
-LEFT JOIN LATERAL (
-  SELECT max(contacted_at) AS last_contact
-  FROM admission_contacts
-  WHERE admission_id = a.id
-) ac ON true
-GROUP BY ay.label, c.name, d.name, a.stage;
-
--- Calls starting soon that nobody has been reminded about. The WhatsApp job
--- reads this, sends one message per row, and stamps `reminder_sent_at`.
--- Everything the message needs is here, so the job makes one query.
-CREATE VIEW appointments_needing_reminder AS
-SELECT
-  ap.id            AS appointment_id,
-  ap.starts_at,
-  ap.channel,
-  cmp.name         AS campus,
-  d.name           AS department,
-  sp.surname       AS staff_surname,
-  sp.given_names   AS staff_given_names,
-  sp.phone         AS staff_phone,
-  a.surname        AS enquirer_surname,
-  a.given_names    AS enquirer_given_names,
-  a.phone          AS enquirer_phone
-FROM appointments ap
-JOIN admissions   a   ON a.id = ap.admission_id
-JOIN campuses     cmp ON cmp.id = a.campus_id
-JOIN departments  d   ON d.id = a.department_id
-LEFT JOIN persons sp  ON sp.id = ap.staff_id
-WHERE ap.status IN ('booked', 'confirmed')
-  AND ap.reminder_sent_at IS NULL
-  AND ap.starts_at > now()
-  AND ap.starts_at < now() + interval '2 hours';
-
--- Every call booked from today onwards, for the admissions office's day view.
--- A call with no `staff_surname` is one nobody has picked up yet.
-CREATE VIEW appointment_diary AS
-SELECT
-  ap.id            AS appointment_id,
-  ap.starts_at,
-  ap.ends_at,
-  ap.channel,
-  ap.status,
-  cmp.name         AS campus,
-  d.name           AS department,
-  a.level_applied,
-  a.stage          AS admission_stage,
-  sp.surname       AS staff_surname,
-  a.surname        AS enquirer_surname,
-  a.given_names    AS enquirer_given_names,
-  a.phone          AS enquirer_phone,
-  ap.google_event_id IS NOT NULL AS in_google_calendar,
-  ap.reminder_sent_at IS NOT NULL AS reminded
-FROM appointments ap
-JOIN admissions   a   ON a.id = ap.admission_id
-JOIN campuses     cmp ON cmp.id = a.campus_id
-JOIN departments  d   ON d.id = a.department_id
-LEFT JOIN persons sp  ON sp.id = ap.staff_id
-WHERE ap.starts_at >= CURRENT_DATE;
-
--- Level 1 candidates and the specialisation they said they wanted, so next
--- year's Level 2 classes can be sized before they have to be created.
-CREATE VIEW level_one_specialisation_interest AS
-SELECT
-  c.name              AS campus,
-  d.name              AS department,
-  COALESCE(sp.name, 'Undecided') AS intended_specialisation,
-  count(*)            AS candidates
-FROM admissions a
-JOIN campuses       c  ON c.id = a.campus_id
-JOIN departments    d  ON d.id = a.department_id
-LEFT JOIN specialisations sp ON sp.id = a.specialisation_id
-WHERE a.level_applied = 1
-  AND a.stage IN ('lead', 'applied', 'reviewing', 'offered', 'accepted', 'enrolled')
-GROUP BY c.name, d.name, COALESCE(sp.name, 'Undecided');
-
 -- Gaps the registry should fill. Mandatory-for-students fields live on the
 -- shared `persons` table, where NOT NULL would also bind staff, so they are
 -- checked here instead. See DESIGN.md, "What is not enforced".
@@ -1172,9 +949,6 @@ ALTER TABLE classes                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE course_offerings         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teaching_assignments     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enrolments               ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admissions               ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admission_contacts       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE appointments             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fee_schedules            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fee_schedule_installments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_charges          ENABLE ROW LEVEL SECURITY;

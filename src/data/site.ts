@@ -372,31 +372,6 @@ export const stats = [
   { value: branches.length, suffix: "", label: "Campuses nationwide" },
 ];
 
-/* Testimonials — EMPTY ON PURPOSE.
-
-   Three quotes used to sit here, attributed to three real people whose names
-   and roles the school supplied (they are recorded in REPLACE-ME.md §4). The
-   words themselves were drafted here, not said by those people, so they were
-   removed rather than published without consent.
-
-   To bring the section back, add entries below. Nothing else needs touching:
-   the component and the /testimonials page render themselves again the moment
-   this array is non-empty, and hide themselves while it is empty.
-
-   Two rules for anything added here:
-   - the named person wrote or approved their own words;
-   - `photo` stays absent unless it is a real, consented photograph of that
-     person. A real name must never wear a stock or AI face — the section
-     renders initials instead. */
-export type Testimonial = {
-  name: string;
-  role: string;
-  quote: string;
-  photo?: string;
-};
-
-export const testimonials: Testimonial[] = [];
-
 /* ✅ FLIER-derived answers, phrased for the web */
 export const faqs = [
   {
@@ -486,7 +461,6 @@ export const navigation = [
     })),
   },
   { label: "Admissions", href: "/admissions" },
-  { label: "Share your story", href: "/testimonials" },
   { label: "Campus", href: "/campus" },
   { label: "Contact", href: "/contact" },
 ];

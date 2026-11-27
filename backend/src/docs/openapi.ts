@@ -107,6 +107,7 @@ export function openApiDocument() {
       { name: "Signing in", description: "Password and Google" },
       { name: "Registering", description: "Asking for an account" },
       { name: "Reviewing", description: "Admin: approving those requests" },
+      { name: "Student portal", description: "A student's own record — results, fees, attendance" },
       { name: "Catalogue", description: "Public. Campuses, departments, programmes" },
       { name: "Booking", description: "Public. Booking a call, via Google Calendar" },
       { name: "Classroom", description: "Admin: Google Classroom sync" },
@@ -190,6 +191,55 @@ export function openApiDocument() {
             "200": { description: "The signed-in person" },
             ...errors,
           },
+        },
+      },
+
+      "/me/enrolment": {
+        get: {
+          tags: ["Student portal"],
+          summary: "My class, level and campus",
+          description:
+            "Reads the student id from the session. There is no address in the student portal that takes somebody else's id.",
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/me/subjects": {
+        get: {
+          tags: ["Student portal"],
+          summary: "My subjects this year, and who teaches each",
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/me/results": {
+        get: {
+          tags: ["Student portal"],
+          summary: "My published results and running average",
+          description:
+            "Published results only. A mark a lecturer has entered but the registry has not released cannot appear here.",
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/me/attendance": {
+        get: {
+          tags: ["Student portal"],
+          summary: "How often I attended, per subject",
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/me/fees": {
+        get: {
+          tags: ["Student portal"],
+          summary: "What I owe, what I have paid, and the receipts",
+          description:
+            "Records money, never takes it. Fees are paid at the bursary.",
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/me/documents": {
+        get: {
+          tags: ["Student portal"],
+          summary: "What is on file for me",
+          responses: { "200": { description: "OK" }, ...errors },
         },
       },
 

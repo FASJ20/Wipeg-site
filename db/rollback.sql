@@ -11,6 +11,8 @@
 
 BEGIN;
 
+DROP VIEW IF EXISTS attendance_summary;
+DROP VIEW IF EXISTS student_results;
 DROP VIEW IF EXISTS fee_schedules_unbalanced;
 DROP VIEW IF EXISTS students_missing_required_data;
 DROP VIEW IF EXISTS fee_collections_by_day;
@@ -22,6 +24,10 @@ DROP VIEW IF EXISTS current_students;
 
 -- Reverse order of creation: money, then delivery, then people, then calendar,
 -- then catalogue. CASCADE is deliberate — it also removes the triggers.
+DROP TABLE IF EXISTS attendance                CASCADE;
+DROP TABLE IF EXISTS class_sessions            CASCADE;
+DROP TABLE IF EXISTS results                   CASCADE;
+DROP TABLE IF EXISTS grading_scale             CASCADE;
 DROP TABLE IF EXISTS account_requests          CASCADE;
 DROP TABLE IF EXISTS audit_log                 CASCADE;
 

@@ -65,6 +65,25 @@ export interface AccountRequests {
   updated_at: Generated<Timestamp>;
 }
 
+export interface Attendance {
+  marked_at: Generated<Timestamp>;
+  marked_by: string | null;
+  note: string | null;
+  session_id: string;
+  status: string;
+  student_id: string;
+}
+
+export interface AttendanceSummary {
+  course_code: string | null;
+  course_offering_id: string | null;
+  course_title: string | null;
+  percent_attended: Numeric | null;
+  sessions_attended: Int8 | null;
+  sessions_held: Int8 | null;
+  student_id: string | null;
+}
+
 export interface AuditLog {
   action: string;
   actor_email: string | null;
@@ -113,6 +132,17 @@ export interface Classes {
   level: number;
   specialisation_id: string | null;
   updated_at: Generated<Timestamp>;
+}
+
+export interface ClassSessions {
+  course_offering_id: string;
+  created_at: Generated<Timestamp>;
+  ends_at: string | null;
+  held_on: Timestamp;
+  id: Generated<string>;
+  starts_at: string | null;
+  taken_by: string | null;
+  topic: string | null;
 }
 
 export interface CourseOfferings {
@@ -288,6 +318,14 @@ export interface FeeStatus {
   total_paid: Numeric | null;
 }
 
+export interface GradingScale {
+  description: string | null;
+  grade: string;
+  grade_point: Numeric;
+  is_pass: boolean;
+  min_mark: Numeric;
+}
+
 export interface Levels {
   award_id: string;
   level: number;
@@ -334,6 +372,23 @@ export interface Persons {
   school_email: string | null;
   sex: string | null;
   surname: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface Results {
+  attempt: Generated<number>;
+  ca_mark: Numeric | null;
+  course_offering_id: string;
+  created_at: Generated<Timestamp>;
+  enrolment_id: string;
+  entered_at: Timestamp | null;
+  entered_by: string | null;
+  exam_mark: Numeric | null;
+  id: Generated<string>;
+  published_at: Timestamp | null;
+  published_by: string | null;
+  remark: string | null;
+  status: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
 
@@ -388,6 +443,26 @@ export interface StudentCharges {
   updated_at: Generated<Timestamp>;
   waived: Generated<boolean>;
   waiver_reason: string | null;
+}
+
+export interface StudentResults {
+  academic_year: string | null;
+  attempt: number | null;
+  ca_mark: Numeric | null;
+  course_code: string | null;
+  course_title: string | null;
+  credit_hours: number | null;
+  exam_mark: Numeric | null;
+  grade: string | null;
+  grade_point: Numeric | null;
+  is_pass: boolean | null;
+  matricule: string | null;
+  published_at: Timestamp | null;
+  remark: string | null;
+  result_id: string | null;
+  student_id: string | null;
+  term: string | null;
+  total_mark: Numeric | null;
 }
 
 export interface Students {
@@ -454,9 +529,12 @@ export interface Terms {
 export interface DB {
   academic_years: AcademicYears;
   account_requests: AccountRequests;
+  attendance: Attendance;
+  attendance_summary: AttendanceSummary;
   audit_log: AuditLog;
   awards: Awards;
   campuses: Campuses;
+  class_sessions: ClassSessions;
   classes: Classes;
   course_offerings: CourseOfferings;
   courses: Courses;
@@ -472,14 +550,17 @@ export interface DB {
   fee_schedules: FeeSchedules;
   fee_schedules_unbalanced: FeeSchedulesUnbalanced;
   fee_status: FeeStatus;
+  grading_scale: GradingScale;
   levels: Levels;
   online_students_for_exams: OnlineStudentsForExams;
   persons: Persons;
+  results: Results;
   specialisations: Specialisations;
   staff: Staff;
   staff_departments: StaffDepartments;
   staff_roles: StaffRoles;
   student_charges: StudentCharges;
+  student_results: StudentResults;
   students: Students;
   students_missing_required_data: StudentsMissingRequiredData;
   teaching_assignments: TeachingAssignments;

@@ -109,6 +109,9 @@ export function openApiDocument() {
       { name: "Reviewing", description: "Admin: approving those requests" },
       { name: "Student portal", description: "A student's own record — results, fees, attendance" },
       { name: "Student records", description: "Staff: the registry view of students" },
+      { name: "Staff records", description: "Admin: staff, and who is an administrator" },
+      { name: "Lecturer portal", description: "A lecturer's own subjects, marks and registers" },
+      { name: "Results desk", description: "Admin: reviewing and publishing marks" },
       { name: "Catalogue", description: "Public. Campuses, departments, programmes" },
       { name: "Booking", description: "Public. Booking a call, via Google Calendar" },
       { name: "Classroom", description: "Admin: Google Classroom sync" },
@@ -192,6 +195,283 @@ export function openApiDocument() {
             "200": { description: "The signed-in person" },
             ...errors,
           },
+        },
+      },
+
+      "/teaching": {
+        get: {
+          tags: ["Lecturer portal"],
+          summary: "The subjects I teach this year",
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/teaching/offerings/{id}/students": {
+        get: {
+          tags: ["Lecturer portal"],
+          summary: "My class list, with any marks already entered",
+          description:
+            "One row per student whether or not they have a mark yet, so the gaps are visible.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/teaching/offerings/{id}/marks": {
+        put: {
+          tags: ["Lecturer portal"],
+          summary: "Save marks as draft",
+          description:
+            "Nothing here reaches a student. Results already submitted or published are skipped rather than overwritten, and the response says how many.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["marks"],
+              properties: {
+                marks: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["enrolmentId", "caMark", "examMark"],
+                    properties: {
+                      enrolmentId: { type: "string", format: "uuid" },
+                      caMark: { type: "number", minimum: 0, maximum: 100, nullable: true },
+                      examMark: { type: "number", minimum: 0, maximum: 100, nullable: true },
+                      remark: { type: "string", example: "Absent from exam" },
+                    },
+                  },
+                },
+              },
+            }),
+          },
+          responses: { "200": { description: "Saved" }, ...errors },
+        },
+      },
+      "/teaching/offerings/{id}/marks/submit": {
+        post: {
+          tags: ["Lecturer portal"],
+          summary: "Hand the marks to the registry",
+          description:
+            "Draft becomes submitted. After this the lecturer can no longer edit them \u2014 the registry needs a fixed set to review. Students still cannot see them.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "Submitted" }, ...errors },
+        },
+      },
+      "/teaching/offerings/{id}/sessions": {
+        get: {
+          tags: ["Lecturer portal"],
+          summary: "Registers for this subject",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+        post: {
+          tags: ["Lecturer portal"],
+          summary: "Open a register for a class meeting",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["heldOn"],
+              properties: {
+                heldOn: { type: "string", format: "date", example: "2026-11-20" },
+                startsAt: { type: "string", example: "08:00" },
+                endsAt: { type: "string", example: "10:00" },
+                topic: { type: "string", example: "Binary numbers" },
+              },
+            }),
+          },
+          responses: { "201": { description: "Register opened" }, ...errors },
+        },
+      },
+      "/teaching/sessions/{sessionId}/register": {
+        get: {
+          tags: ["Lecturer portal"],
+          summary: "Read the register",
+          parameters: [{ name: "sessionId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+        put: {
+          tags: ["Lecturer portal"],
+          summary: "Mark the register",
+          description:
+            "Re-marking a student replaces the earlier entry, because correcting 'absent' to 'present' five minutes later is the normal case.",
+          parameters: [{ name: "sessionId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["entries"],
+              properties: {
+                entries: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["studentId", "status"],
+                    properties: {
+                      studentId: { type: "string", format: "uuid" },
+                      status: { type: "string", enum: ["present", "absent", "late", "excused"] },
+                      note: { type: "string" },
+                    },
+                  },
+                },
+              },
+            }),
+          },
+          responses: { "200": { description: "Marked" }, ...errors },
+        },
+      },
+
+      "/results/pending": {
+        get: {
+          tags: ["Results desk"],
+          summary: "Subjects waiting to be published",
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/results/offerings/{id}": {
+        get: {
+          tags: ["Results desk"],
+          summary: "Read a subject's submitted marks before deciding",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+      },
+      "/results/offerings/{id}/publish": {
+        post: {
+          tags: ["Results desk"],
+          summary: "Release a subject's marks to its students",
+          description:
+            "The course code has to be typed back. A student cannot un-see a mark, so this is worth one deliberate action rather than a button beside five others.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["confirmCourseCode"],
+              properties: { confirmCourseCode: { type: "string", example: "CEN101" } },
+            }),
+          },
+          responses: { "200": { description: "Published" }, ...errors },
+        },
+      },
+      "/results/offerings/{id}/return": {
+        post: {
+          tags: ["Results desk"],
+          summary: "Send a subject back to the lecturer",
+          description:
+            "Submitted marks return to draft. Published ones stay published \u2014 a student has read them, and quietly withdrawing a result is worse than correcting it in the open.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["reason"],
+              properties: { reason: { type: "string", example: "Two marks above 100" } },
+            }),
+          },
+          responses: { "200": { description: "Returned" }, ...errors },
+        },
+      },
+
+      "/staff": {
+        get: {
+          tags: ["Staff records"],
+          summary: "Search and list staff",
+          parameters: [
+            { name: "search", in: "query", schema: { type: "string" } },
+            { name: "departmentId", in: "query", schema: { type: "string", format: "uuid" } },
+            { name: "status", in: "query", schema: { type: "string", enum: ["active", "on_leave", "former"] } },
+            { name: "adminsOnly", in: "query", schema: { type: "boolean" } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 50 } },
+            { name: "cursor", in: "query", schema: { type: "string" } },
+          ],
+          responses: { "200": { description: "A page of staff" }, ...errors },
+        },
+      },
+      "/staff/{id}": {
+        get: {
+          tags: ["Staff records"],
+          summary: "One member of staff",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+        patch: {
+          tags: ["Staff records"],
+          summary: "Correct a staff record",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              properties: {
+                surname: { type: "string" },
+                givenNames: { type: "string" },
+                phone: { type: "string", example: "+237675413814" },
+                staffNumber: { type: "string", example: "S001" },
+                jobTitle: { type: "string", example: "Head of Department" },
+                employmentType: { type: "string", enum: ["permanent", "part_time", "visiting"] },
+                highestQualification: { type: "string", example: "PhD" },
+                hiredOn: { type: "string", format: "date" },
+                status: { type: "string", enum: ["active", "on_leave", "former"] },
+              },
+            }),
+          },
+          responses: { "200": { description: "Updated" }, ...errors },
+        },
+      },
+      "/staff/{id}/retire": {
+        post: {
+          tags: ["Staff records"],
+          summary: "Retire a member of staff",
+          description:
+            "Marks them former and revokes any admin grant in the same transaction. Nothing is deleted: a lecturer who taught a class three years ago is named on those results. Refused for the last administrator.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["reason"],
+              properties: { reason: { type: "string", example: "Contract ended" } },
+            }),
+          },
+          responses: { "200": { description: "Retired" }, ...errors },
+        },
+      },
+      "/staff/{id}/grant-admin": {
+        post: {
+          tags: ["Staff records"],
+          summary: "Make somebody an administrator",
+          description:
+            "The most consequential action in the system: it hands over every student record, every fee, and the ability to grant it to others. Logged in capitals.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["reason"],
+              properties: { reason: { type: "string", example: "Promoted to registrar" } },
+            }),
+          },
+          responses: { "200": { description: "Granted" }, ...errors },
+        },
+      },
+      "/staff/{id}/revoke-admin": {
+        post: {
+          tags: ["Staff records"],
+          summary: "Take administrator access away",
+          description:
+            "Refused for the last administrator, including when that is you. The commonest way to lock an institution out of its own system is one person tidying up their own permissions.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["reason"],
+              properties: { reason: { type: "string", example: "Stepped down" } },
+            }),
+          },
+          responses: { "200": { description: "Revoked" }, ...errors },
         },
       },
 

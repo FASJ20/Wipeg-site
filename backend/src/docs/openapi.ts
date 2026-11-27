@@ -108,6 +108,7 @@ export function openApiDocument() {
       { name: "Registering", description: "Asking for an account" },
       { name: "Reviewing", description: "Admin: approving those requests" },
       { name: "Student portal", description: "A student's own record — results, fees, attendance" },
+      { name: "Student records", description: "Staff: the registry view of students" },
       { name: "Catalogue", description: "Public. Campuses, departments, programmes" },
       { name: "Booking", description: "Public. Booking a call, via Google Calendar" },
       { name: "Classroom", description: "Admin: Google Classroom sync" },
@@ -191,6 +192,87 @@ export function openApiDocument() {
             "200": { description: "The signed-in person" },
             ...errors,
           },
+        },
+      },
+
+      "/students": {
+        get: {
+          tags: ["Student records"],
+          summary: "Search and list students",
+          description:
+            "Admin only. Paged by cursor rather than page number, so a clerk paging through does not see a row twice while somebody else is enrolling.",
+          parameters: [
+            { name: "search", in: "query", schema: { type: "string" }, description: "Name, matricule or phone" },
+            { name: "campusId", in: "query", schema: { type: "string", format: "uuid" } },
+            { name: "departmentId", in: "query", schema: { type: "string", format: "uuid" } },
+            { name: "level", in: "query", schema: { type: "integer", minimum: 1, maximum: 5 } },
+            { name: "status", in: "query", schema: { type: "string", enum: ["active", "graduated", "withdrawn", "deceased"] } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 50 } },
+            { name: "cursor", in: "query", schema: { type: "string" }, description: "nextCursor from the previous page" },
+          ],
+          responses: { "200": { description: "A page of students" }, ...errors },
+        },
+      },
+      "/students/{id}": {
+        get: {
+          tags: ["Student records"],
+          summary: "One student",
+          description:
+            "An admin gets the full record. A lecturer gets name, matricule, photo and status, and ONLY for a student they actually teach \u2014 anyone else reads as not found, because confirming a student exists is itself a disclosure.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "OK" }, ...errors },
+        },
+        patch: {
+          tags: ["Student records"],
+          summary: "Correct a student record",
+          description:
+            "Admin only. Any field can be corrected. Changing a matricule or a date of birth writes its own loud audit entry naming the old and new value \u2014 allowed, but impossible to do quietly.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              properties: {
+                surname: { type: "string" },
+                givenNames: { type: "string" },
+                phone: { type: "string", example: "+237655596057" },
+                personalEmail: { type: "string", format: "email" },
+                matricule: { type: "string", example: "WIP24CEN001" },
+                guardianName: { type: "string" },
+                guardianPhone: { type: "string" },
+                dateOfBirth: { type: "string", format: "date" },
+                addressTown: { type: "string" },
+                status: { type: "string", enum: ["active", "graduated", "withdrawn", "deceased"] },
+              },
+            }),
+          },
+          responses: { "200": { description: "The updated record" }, ...errors },
+        },
+      },
+      "/students/{id}/withdraw": {
+        post: {
+          tags: ["Student records"],
+          summary: "Take a student off the roll",
+          description:
+            "This is what DELETE would have been. Nothing is removed: the student is marked withdrawn and their enrolment closed, so results, fees and documents survive. A student who leaves in October may be back in February, and the database refuses a real delete anyway.",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          requestBody: {
+            required: true,
+            content: json({
+              type: "object",
+              required: ["reason"],
+              properties: { reason: { type: "string", example: "Transferred to Yaounde campus" } },
+            }),
+          },
+          responses: { "200": { description: "Withdrawn" }, ...errors },
+        },
+      },
+      "/students/{id}/reinstate": {
+        post: {
+          tags: ["Student records"],
+          summary: "Bring a withdrawn student back",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+          responses: { "200": { description: "Active again" }, ...errors },
         },
       },
 

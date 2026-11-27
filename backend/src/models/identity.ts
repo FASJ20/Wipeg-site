@@ -1,7 +1,7 @@
-import { query, queryOne } from "../lib/db.js";
+import { db, sql } from "../lib/db.js";
 
 /**
- * Who the caller is. The only place the three-role rule is expressed in SQL.
+ * Who the caller is. The only place the three-role rule is written in SQL.
  *
  *   Student   a row in `students`
  *   Lecturer  a row in `staff`
@@ -26,55 +26,52 @@ export type Identity = {
   matricule: string | null;
   staffNumber: string | null;
   jobTitle: string | null;
-  /** Suspended, graduated, former — anything that should end portal access. */
+  /** Withdrawn, graduated, former — anything that should end portal access. */
   active: boolean;
 };
 
-type IdentityRow = {
-  person_id: string;
-  surname: string;
-  given_names: string;
-  school_email: string | null;
-  photo_key: string | null;
-  preferred_language: "en" | "fr";
-  is_student: boolean;
-  is_staff: boolean;
-  is_admin: boolean;
-  matricule: string | null;
-  staff_number: string | null;
-  job_title: string | null;
-  student_status: string | null;
-  staff_status: string | null;
-};
+/**
+ * One query, reused by all three lookups.
+ *
+ * The three role flags are computed here rather than in TypeScript so that
+ * the definition of "is an admin" lives in exactly one place. The join to
+ * `staff_roles` carries the live-grant condition with it: a revoked grant
+ * produces no row, so `is_admin` is false the moment it is revoked.
+ */
+function identityQuery() {
+  return db
+    .selectFrom("persons as p")
+    .leftJoin("students as st", "st.person_id", "p.id")
+    .leftJoin("staff as sf", "sf.person_id", "p.id")
+    .leftJoin("staff_roles as sr", (join) =>
+      join
+        .onRef("sr.staff_id", "=", "sf.person_id")
+        .on("sr.role", "=", "admin")
+        .on("sr.revoked_on", "is", null),
+    )
+    .select([
+      "p.id as person_id",
+      "p.surname",
+      "p.given_names",
+      "p.school_email",
+      "p.photo_key",
+      "p.preferred_language",
+      "st.matricule",
+      "sf.staff_number",
+      "sf.job_title",
+      "st.status as student_status",
+      "sf.status as staff_status",
+      sql<boolean>`st.person_id IS NOT NULL`.as("is_student"),
+      sql<boolean>`sf.person_id IS NOT NULL`.as("is_staff"),
+      sql<boolean>`sr.staff_id IS NOT NULL`.as("is_admin"),
+    ]);
+}
 
-const IDENTITY_SELECT = `
-  SELECT
-    p.id                         AS person_id,
-    p.surname,
-    p.given_names,
-    p.school_email,
-    p.photo_key,
-    p.preferred_language,
-    (st.person_id IS NOT NULL)   AS is_student,
-    (sf.person_id IS NOT NULL)   AS is_staff,
-    (sr.staff_id  IS NOT NULL)   AS is_admin,
-    st.matricule,
-    sf.staff_number,
-    sf.job_title,
-    st.status                    AS student_status,
-    sf.status                    AS staff_status
-  FROM persons p
-  LEFT JOIN students st ON st.person_id = p.id
-  LEFT JOIN staff    sf ON sf.person_id = p.id
-  LEFT JOIN staff_roles sr
-         ON sr.staff_id = sf.person_id
-        AND sr.role = 'admin'
-        AND sr.revoked_on IS NULL
-`;
+type IdentityRow = Awaited<ReturnType<ReturnType<typeof identityQuery>["execute"]>>[number];
 
 function toIdentity(row: IdentityRow): Identity {
-  // A withdrawn student or a former member of staff keeps their record but
-  // loses the portal. Checked here so no endpoint has to remember to.
+  // A withdrawn student or a former member of staff keeps their record and
+  // loses the portal. Decided here so no endpoint has to remember to check.
   const active =
     (row.is_student && row.student_status === "active") ||
     (row.is_staff && row.staff_status !== "former");
@@ -85,7 +82,7 @@ function toIdentity(row: IdentityRow): Identity {
     givenNames: row.given_names,
     schoolEmail: row.school_email,
     photoKey: row.photo_key,
-    preferredLanguage: row.preferred_language,
+    preferredLanguage: row.preferred_language as "en" | "fr",
     isStudent: row.is_student,
     isStaff: row.is_staff,
     isAdmin: row.is_admin,
@@ -96,66 +93,71 @@ function toIdentity(row: IdentityRow): Identity {
   };
 }
 
-export async function findByPersonId(personId: string): Promise<Identity | null> {
-  const row = await queryOne<IdentityRow>(
-    `${IDENTITY_SELECT} WHERE p.id = $1`,
-    [personId],
-  );
+export async function findByPersonId(
+  personId: string,
+): Promise<Identity | null> {
+  const row = await identityQuery()
+    .where("p.id", "=", personId)
+    .executeTakeFirst();
   return row ? toIdentity(row) : null;
 }
 
 export async function findByGoogleSub(sub: string): Promise<Identity | null> {
-  const row = await queryOne<IdentityRow>(
-    `${IDENTITY_SELECT} WHERE p.google_sub = $1`,
-    [sub],
-  );
+  const row = await identityQuery()
+    .where("p.google_sub", "=", sub)
+    .executeTakeFirst();
   return row ? toIdentity(row) : null;
 }
 
-export async function findBySchoolEmail(email: string): Promise<Identity | null> {
-  const row = await queryOne<IdentityRow>(
-    `${IDENTITY_SELECT} WHERE lower(p.school_email) = lower($1)`,
-    [email],
-  );
+export async function findBySchoolEmail(
+  email: string,
+): Promise<Identity | null> {
+  const row = await identityQuery()
+    .where(sql`lower(p.school_email)`, "=", email.toLowerCase())
+    .executeTakeFirst();
   return row ? toIdentity(row) : null;
 }
 
 /**
  * Bind a Google account to a person on first sign-in, and stamp the time.
  *
- * `google_sub` is written once and then matched on afterwards, because an
- * address can be changed in the Admin console and Google's subject id cannot.
+ * `google_sub` is written once and matched on afterwards, because an address
+ * can be changed in the Admin console and Google's subject id cannot.
  */
 export async function linkGoogleAccount(
   personId: string,
   googleSub: string,
   schoolEmail: string,
 ): Promise<void> {
-  await query(
-    `UPDATE persons
-        SET google_sub        = $2,
-            school_email      = $3,
-            last_signed_in_at = now()
-      WHERE id = $1`,
-    [personId, googleSub, schoolEmail],
-  );
+  await db
+    .updateTable("persons")
+    .set({
+      google_sub: googleSub,
+      school_email: schoolEmail,
+      last_signed_in_at: new Date(),
+    })
+    .where("id", "=", personId)
+    .execute();
 }
 
 export async function stampSignIn(personId: string): Promise<void> {
-  await query(`UPDATE persons SET last_signed_in_at = now() WHERE id = $1`, [
-    personId,
-  ]);
+  await db
+    .updateTable("persons")
+    .set({ last_signed_in_at: new Date() })
+    .where("id", "=", personId)
+    .execute();
 }
 
-/** Written onto the person record once the Workspace account is created. */
+/** Written onto the person once their Workspace account exists. */
 export async function setSchoolEmail(
   personId: string,
   schoolEmail: string,
 ): Promise<void> {
-  await query(`UPDATE persons SET school_email = $2 WHERE id = $1`, [
-    personId,
-    schoolEmail,
-  ]);
+  await db
+    .updateTable("persons")
+    .set({ school_email: schoolEmail })
+    .where("id", "=", personId)
+    .execute();
 }
 
 /** The role name used in the audit log and in error messages. */

@@ -1,28 +1,37 @@
+import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 
+import type { DB } from "../db/types.js";
 import { env, isProduction } from "./env.js";
 import { logger } from "./logger.js";
 
 /**
- * The one database pool, and the only two ways to reach Postgres.
+ * The database, reached through Kysely.
  *
- * `query` and `tx` both take parameterised SQL. There is no helper here that
- * builds SQL from a string, and there should never be one — the moment a
- * query is assembled by concatenation, every caller becomes a place an
- * injection can happen.
+ * Kysely is a query builder, not an ORM. It generates exactly the query you
+ * write — no lazy loading, no hidden joins, no magic. What it adds is that
+ * the column names and their types come from `src/db/types.ts`, which is
+ * generated from `db/schema.sql` itself. Rename a column in the schema and
+ * the build breaks, instead of production breaking.
  *
- * Models import this. Controllers must not: see backend/README.md.
+ * That is the whole reason it is here rather than an ORM: the database
+ * already enforces WIPEG's rules (one active enrolment per student, Level 1
+ * is department-wide, instalments must sum to the total). An ORM hides the
+ * database and sometimes generates queries around those rules. Kysely cannot,
+ * because it never writes a query you did not.
+ *
+ * Models import `db`. Controllers must not: see backend/README.md.
  */
 
 const { Pool } = pg;
 
 /**
- * XAF amounts are stored as bigint. node-postgres hands bigint back as a
- * string so that large values survive, which is right in general and wrong
- * for us — the largest fee WIPEG will ever charge is nowhere near
- * Number.MAX_SAFE_INTEGER, and a string that is sometimes a number is a bug
- * waiting to happen in the JSON. Parse it, but refuse anything that would
- * actually lose precision.
+ * Money is stored as bigint. node-postgres returns bigint as a string so that
+ * huge values survive, which is right in general and wrong for us — the
+ * biggest fee WIPEG will ever charge is nowhere near the safe integer limit,
+ * and a value that is sometimes a string and sometimes a number is a bug
+ * waiting to happen in JSON. Parse it, but refuse anything that really would
+ * lose precision rather than silently rounding it.
  */
 pg.types.setTypeParser(20, (value: string) => {
   const n = Number(value);
@@ -37,7 +46,7 @@ pg.types.setTypeParser(20, (value: string) => {
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
   // Supabase terminates TLS with its own chain; the hosted pooler is not
-  // reachable without this and verification is handled at the network layer.
+  // reachable without this, and verification happens at the network layer.
   ssl: isProduction ? { rejectUnauthorized: false } : undefined,
   max: 10,
   idleTimeoutMillis: 30_000,
@@ -49,107 +58,49 @@ pool.on("error", (error) => {
   logger.error("idle database client errored", { error });
 });
 
-export type Sql = string;
-
-/** Run one parameterised statement and get the rows back. */
-export async function query<Row extends Record<string, unknown>>(
-  sql: Sql,
-  params: readonly unknown[] = [],
-): Promise<Row[]> {
-  const started = Date.now();
-  try {
-    const result = await pool.query(sql, params as unknown[]);
-    return result.rows as Row[];
-  } finally {
-    const ms = Date.now() - started;
-    if (ms > 500) {
-      logger.warn("slow query", { ms, sql: sql.replace(/\s+/g, " ").slice(0, 160) });
+export const db = new Kysely<DB>({
+  dialect: new PostgresDialect({ pool }),
+  log: (event) => {
+    if (event.level === "error") {
+      logger.error("query failed", {
+        ms: Math.round(event.queryDurationMillis),
+        sql: event.query.sql.slice(0, 200),
+      });
+      return;
     }
-  }
-}
-
-/** The single row, or null. Throws if the query returned more than one. */
-export async function queryOne<Row extends Record<string, unknown>>(
-  sql: Sql,
-  params: readonly unknown[] = [],
-): Promise<Row | null> {
-  const rows = await query<Row>(sql, params);
-  if (rows.length > 1) {
-    throw new Error(
-      `Expected at most one row, got ${rows.length}. Check the WHERE clause.`,
-    );
-  }
-  return rows[0] ?? null;
-}
-
-export type Tx = {
-  query: <Row extends Record<string, unknown>>(
-    sql: Sql,
-    params?: readonly unknown[],
-  ) => Promise<Row[]>;
-  queryOne: <Row extends Record<string, unknown>>(
-    sql: Sql,
-    params?: readonly unknown[],
-  ) => Promise<Row | null>;
-};
+    if (event.queryDurationMillis > 500) {
+      logger.warn("slow query", {
+        ms: Math.round(event.queryDurationMillis),
+        sql: event.query.sql.slice(0, 200),
+      });
+    }
+  },
+});
 
 /**
- * Run several statements as one unit. Rolls back on any thrown error.
+ * Kysely's raw SQL tag, for the handful of places a query builder is the
+ * wrong tool — `LATERAL` joins in the fee views, mostly.
  *
- * Used where a half-finished write would be worse than no write: enrolment
- * (which copies the fee schedule into a snapshot of charges), recording a
- * receipt, and reversing one.
+ * Still parameterised: values interpolated into this tag become bind
+ * parameters, they are not pasted into the string. There is deliberately no
+ * helper anywhere in this codebase that builds SQL by concatenation.
  */
-export async function tx<T>(run: (t: Tx) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    const handle: Tx = {
-      query: async <Row extends Record<string, unknown>>(
-        sql: Sql,
-        params: readonly unknown[] = [],
-      ) => (await client.query(sql, params as unknown[])).rows as Row[],
-      queryOne: async <Row extends Record<string, unknown>>(
-        sql: Sql,
-        params: readonly unknown[] = [],
-      ) => {
-        const rows = (await client.query(sql, params as unknown[])).rows as Row[];
-        if (rows.length > 1) {
-          throw new Error(`Expected at most one row, got ${rows.length}.`);
-        }
-        return rows[0] ?? null;
-      },
-    };
-
-    const result = await run(handle);
-    await client.query("COMMIT");
-    return result;
-  } catch (error) {
-    try {
-      await client.query("ROLLBACK");
-    } catch (rollbackError) {
-      logger.error("rollback failed", { error: rollbackError });
-    }
-    throw error;
-  } finally {
-    client.release();
-  }
-}
+export { sql };
 
 /** Used by the health endpoint, and at boot to fail fast on a bad URL. */
 export async function pingDatabase(): Promise<void> {
-  await query("SELECT 1;");
+  await sql`SELECT 1`.execute(db);
 }
 
 export async function closeDatabase(): Promise<void> {
-  await pool.end();
+  await db.destroy();
 }
 
 /**
  * Postgres error codes the API turns into something a human can act on.
- * Checking the code is how we stay idempotent without a read-then-write race:
- * insert, and let a unique index be the thing that says "already there".
+ *
+ * Checking the code is how writes stay idempotent without a check-then-insert
+ * race: insert, and let a unique index be the thing that says "already there".
  */
 export const PG = {
   UNIQUE_VIOLATION: "23505",
@@ -166,7 +117,7 @@ export function pgErrorCode(error: unknown): string | null {
   return null;
 }
 
-/** The constraint that rejected the write, so a model can say which rule broke. */
+/** The constraint that rejected a write, so a model can name the rule broken. */
 export function pgConstraint(error: unknown): string | null {
   if (typeof error === "object" && error !== null && "constraint" in error) {
     const name = (error as { constraint: unknown }).constraint;

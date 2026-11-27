@@ -136,9 +136,22 @@ schemes side by side.
 | Choice | Why |
 |---|---|
 | Node 20+, TypeScript strict, Express 5 | MCR maps onto it directly, and it is the least surprising thing to hand to another developer |
-| `pg`, plain parameterised SQL | The database already enforces the Level 1 rule, single-active-enrolment, one-head-per-department and the fee instalment rules. An ORM would hide them and sometimes generate queries around them |
+| **Kysely**, a query builder | You get autocomplete and type checking on every column name, generated from `db/schema.sql` itself — rename a column and the build breaks instead of production. But it never writes a query you did not, so the rules the database enforces (one active enrolment, Level 1 is department-wide, instalments must sum to the total) stay enforced. A full ORM would hide them |
 | `zod` | One schema per endpoint, checked before anything reaches a model |
 | `google-auth-library` + `fetch` | Rather than `googleapis`, which is tens of megabytes for the handful of calls used here. The request bodies are easier to audit when they are visible |
 | `vitest` | Tests, including against a throwaway Postgres as `db/test_rules.py` already does |
 
-No ORM. No migrations in this folder.
+**Not an ORM, and no migrations here.** Kysely builds the query you write and
+nothing else. The tables are created from `db/schema.sql`, once, and changed
+there as reviewed SQL.
+
+### Regenerating the types
+
+After any change to `db/schema.sql`, re-apply it and run:
+
+```powershell
+cd backend; npm run db:types
+```
+
+That rewrites `src/db/types.ts` from the live database. Never edit that file
+by hand.

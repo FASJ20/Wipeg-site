@@ -44,6 +44,27 @@ export interface AcademicYears {
   updated_at: Generated<Timestamp>;
 }
 
+export interface AccountRequests {
+  campus_id: string | null;
+  created_at: Generated<Timestamp>;
+  department_id: string | null;
+  email: string;
+  given_names: string;
+  id: Generated<string>;
+  kind: string;
+  level_applied: number | null;
+  message: string | null;
+  password_hash: string;
+  person_id: string | null;
+  phone: string;
+  reject_reason: string | null;
+  reviewed_at: Timestamp | null;
+  reviewed_by: string | null;
+  status: Generated<string>;
+  surname: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface AuditLog {
   action: string;
   actor_email: string | null;
@@ -303,6 +324,7 @@ export interface Persons {
   last_signed_in_at: Timestamp | null;
   name_on_id: string;
   nationality: Generated<string>;
+  password_hash: string | null;
   personal_email: string | null;
   phone: string;
   phone_alt: string | null;
@@ -431,6 +453,7 @@ export interface Terms {
 
 export interface DB {
   academic_years: AcademicYears;
+  account_requests: AccountRequests;
   audit_log: AuditLog;
   awards: Awards;
   campuses: Campuses;

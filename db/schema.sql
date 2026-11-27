@@ -256,6 +256,11 @@ CREATE TABLE persons (
   google_sub        text UNIQUE,
   last_signed_in_at timestamptz,
 
+  -- For signing in with a password instead of Google. Null for anyone who
+  -- only ever uses Google, which is most staff. Never the password itself:
+  -- this is a scrypt hash and cannot be turned back into one.
+  password_hash     text,
+
   preferred_language text NOT NULL DEFAULT 'en'
                       CHECK (preferred_language IN ('en', 'fr')),
 
@@ -926,6 +931,70 @@ GROUP BY fs.id, ay.label, d.name, sp.name, fs.level, fs.tuition_total
 HAVING COALESCE(sum(fsi.amount), 0) <> fs.tuition_total;
 
 
+-- ---------------------------------------------------------------------------
+--  ACCOUNT REQUESTS — people asking to join, before anybody says yes
+--
+--  Self-registration writes here, NOT into `persons`. Nothing in this table
+--  grants anything: a row is a request, and an admin turning it into a real
+--  person row is the moment access begins.
+--
+--  That separation is the whole point. If registration wrote straight into
+--  `staff` plus a role grant, anybody who found the address would be an
+--  administrator of WIPEG's student records. Here, the worst a stranger can
+--  do is add a row to a queue.
+-- ---------------------------------------------------------------------------
+CREATE TABLE account_requests (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  kind            text NOT NULL CHECK (kind IN ('student', 'lecturer', 'admin')),
+
+  surname         text NOT NULL,
+  given_names     text NOT NULL,
+  email           text NOT NULL,
+  phone           text NOT NULL CHECK (phone ~ '^\+[0-9]{8,15}$'),
+
+  -- scrypt. Carried over to persons.password_hash on approval, so the person
+  -- signs in with the password they chose and is never sent one by email.
+  password_hash   text NOT NULL,
+
+  -- What a student is applying for. Null for staff, who are not applying to
+  -- study anything.
+  campus_id       uuid REFERENCES campuses(id)     ON DELETE RESTRICT,
+  department_id   uuid REFERENCES departments(id)  ON DELETE RESTRICT,
+  level_applied   smallint REFERENCES levels(level) ON DELETE RESTRICT,
+
+  -- Staff say what they teach or do; students can say anything they like.
+  message         text,
+
+  status          text NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'approved', 'rejected')),
+
+  reviewed_by     uuid REFERENCES staff(person_id) ON DELETE RESTRICT,
+  reviewed_at     timestamptz,
+  reject_reason   text,
+
+  -- Filled in when approved: the person record this became.
+  person_id       uuid REFERENCES persons(id) ON DELETE RESTRICT,
+
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+
+  CHECK (status <> 'rejected' OR reject_reason IS NOT NULL),
+  CHECK (status <> 'approved' OR person_id IS NOT NULL),
+  CHECK (status =  'pending'  OR reviewed_at IS NOT NULL)
+);
+
+CREATE TRIGGER account_requests_touch BEFORE UPDATE ON account_requests
+  FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
+-- One open request per email address. Somebody who registers twice by
+-- accident gets told so, instead of creating two queue entries that two
+-- different admins then approve.
+CREATE UNIQUE INDEX account_requests_one_open_per_email
+  ON account_requests (lower(email)) WHERE status = 'pending';
+
+CREATE INDEX account_requests_queue ON account_requests (status, kind, created_at);
+
 -- ###########################################################################
 --  LAYER 6 — THE RECORD
 --
@@ -977,6 +1046,7 @@ CREATE INDEX audit_log_entity ON audit_log (entity, entity_id, at DESC);
 --  given direct logins.
 -- ###########################################################################
 
+ALTER TABLE account_requests         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campuses                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE departments              ENABLE ROW LEVEL SECURITY;

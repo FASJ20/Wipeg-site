@@ -22,6 +22,7 @@ DROP VIEW IF EXISTS current_students;
 
 -- Reverse order of creation: money, then delivery, then people, then calendar,
 -- then catalogue. CASCADE is deliberate — it also removes the triggers.
+DROP TABLE IF EXISTS account_requests          CASCADE;
 DROP TABLE IF EXISTS audit_log                 CASCADE;
 
 DROP TABLE IF EXISTS fee_receipts              CASCADE;

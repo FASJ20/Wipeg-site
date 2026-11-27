@@ -6,6 +6,7 @@ import { logger } from "./lib/logger.js";
 import { loadIdentity } from "./middleware/auth.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { router } from "./routes/index.js";
+import { mountDocs } from "./docs/mount.js";
 
 /**
  * Assembles the app. Kept separate from `server.ts` so tests can mount it
@@ -60,6 +61,10 @@ export function createApp(): Express {
   // Every request gets an actor, signed in or not, so the audit log and the
   // error log can always name who was asking.
   app.use(loadIdentity);
+
+  // Swagger UI at /api/docs, so every endpoint can be tried in a browser.
+  // Mounted before the router so it is never caught by the 404 handler.
+  mountDocs(app);
 
   app.use("/api", router);
 

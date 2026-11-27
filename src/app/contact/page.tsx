@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
-import { Clock, Mail, MapPin, Phone, ShieldCheck } from "lucide-react";
+import {
+  Clock,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
 
 import { PageHero } from "@/components/site/PageHero";
 import { EnquiryForm } from "@/components/site/EnquiryForm";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Reveal, RevealGroup, RevealItem } from "@/components/ui/Reveal";
 import { school } from "@/data/site";
+import { WHATSAPP_DISPLAY, whatsappLink } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -15,6 +23,18 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   const cards = [
+    // First on purpose. WhatsApp is how people here actually reach an
+    // institution, and it is the one channel that gets answered the same day.
+    {
+      icon: MessageCircle,
+      label: "WhatsApp",
+      lines: [WHATSAPP_DISPLAY, "Usually answered the same day"],
+      hrefs: [
+        whatsappLink(
+          "Hello WIPEG, I would like to ask about admission.",
+        ),
+      ],
+    },
     {
       icon: Phone,
       label: "Phone",

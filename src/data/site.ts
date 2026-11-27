@@ -56,6 +56,12 @@ export const school = {
   /* ✅ POSTER — the posters show Facebook, WhatsApp and Instagram icons.
      🔶 The handles/URLs themselves are not printed, so these still need
      the real links. */
+  /* ✅ POSTER — the registry's WhatsApp line, digits only with no `+` and no
+     spaces, which is the only format wa.me accepts. This is the main Garoua
+     number; the branches have their own lines under `branches` but it is not
+     confirmed which of those are on WhatsApp, so everything routes here and
+     the message says which campus it is about. */
+  whatsapp: "237677487127",
   socials: [
     { label: "Facebook", href: "#" },
     { label: "WhatsApp", href: "https://wa.me/237677487127" },

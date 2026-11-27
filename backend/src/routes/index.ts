@@ -4,13 +4,18 @@ import { z } from "zod";
 import { pingDatabase } from "../lib/db.js";
 import { env } from "../lib/env.js";
 import { asyncHandler, ok } from "../lib/http.js";
-import { requireAdmin, requireAuth } from "../middleware/auth.js";
+import {
+  requireAdmin,
+  requireAuth,
+  requireCronSecret,
+} from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 import { queryOf, validateBody, validateQuery } from "../middleware/validate.js";
 import * as audit from "../models/auditLog.js";
 import * as authController from "../controllers/auth.js";
 import * as bookingController from "../controllers/booking.js";
 import * as catalogueController from "../controllers/catalogue.js";
+import * as classroomController from "../controllers/classroom.js";
 import * as meController from "../controllers/me.js";
 
 /**
@@ -95,6 +100,23 @@ router.post(
   }),
   validateBody(bookingController.bookingBody),
   asyncHandler(bookingController.create),
+);
+
+// ------------------------------------------------- Google Classroom sync
+// Two doors onto the same function. An admin presses the button after
+// enrolling somebody; the scheduler calls the other one hourly so nobody has
+// to remember. Both are safe to run repeatedly.
+router.post(
+  "/classroom/sync",
+  requireAdmin,
+  validateBody(classroomController.syncBody),
+  asyncHandler(classroomController.sync),
+);
+router.post(
+  "/jobs/classroom-sync",
+  requireCronSecret,
+  validateBody(classroomController.syncBody),
+  asyncHandler(classroomController.sync),
 );
 
 // ------------------------------------------------------------- audit log

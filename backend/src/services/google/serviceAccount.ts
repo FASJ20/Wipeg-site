@@ -23,6 +23,18 @@ export const SCOPES = {
   calendar: ["https://www.googleapis.com/auth/calendar.events"],
   /** Create and suspend user accounts. Nothing else in the directory. */
   directory: ["https://www.googleapis.com/auth/admin.directory.user"],
+  /**
+   * Create courses, and add teachers and students to them.
+   *
+   * `classroom.courses` creates; `classroom.rosters` is what the reference
+   * requires for courses.students.create and courses.teachers.create. Both
+   * must also be listed in the Admin console's domain-wide delegation entry
+   * or the token comes back without them and every call 403s.
+   */
+  classroom: [
+    "https://www.googleapis.com/auth/classroom.courses",
+    "https://www.googleapis.com/auth/classroom.rosters",
+  ],
 } as const;
 
 const clients = new Map<string, JWT>();
